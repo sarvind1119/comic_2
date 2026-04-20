@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comic Compositor v2 — LBSNAA Phase 5</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:ital,wght@0,400;0,700;1,400&family=Kalam:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --surface: #161616;
+    --surface2: #1f1f1f;
+    --border: #2a2a2a;
+    --accent: #f59e0b;
+    --accent2: #3b82f6;
+    --green: #22c55e;
+    --red: #ef4444;
+    --text: #e8e8e8;
+    --muted: #666;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Space Mono', monospace;
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 28px 28px 24px;
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  header h1 {
+    font-family: 'Bangers', cursive;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    letter-spacing: 3px;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  header p {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .header-badge {
+    margin-left: auto;
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.3);
+    color: var(--accent);
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+  }
+
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+
+  .input-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px;
+    margin-bottom: 28px;
+  }
+
+  .section-title {
+    font-family: 'Bangers', cursive;
+    font-size: 1rem;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .paste-area {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    padding: 14px;
+    min-height: 100px;
+    resize: vertical;
+    outline: none;
+    line-height: 1.6;
+  }
+
+  .paste-area:focus { border-color: var(--accent2); }
+
+  .upload-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .upload-slot {
+    aspect-ratio: 3/4;
+    border: 2px dashed var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .upload-slot:hover { border-color: var(--accent); }
+  .upload-slot.filled { border-style: solid; border-color: var(--green); }
+  .upload-slot img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    position: absolute; top: 0; left: 0;
+  }
+
+  .upload-slot .slot-label {
+    font-family: 'Bangers', cursive;
+    font-size: 0.85rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+    z-index: 1;
+  }
+
+  .upload-slot .slot-hint {
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-top: 4px;
+    z-index: 1;
+  }
+
+  .upload-slot.filled .slot-label,
+  .upload-slot.filled .slot-hint { display: none; }
+
+  .cover-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .cover-slot {
+    aspect-ratio: 1;
+    border: 2px dashed var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    border-radius: 50%;
+    transition: border-color 0.2s;
+  }
+
+  .cover-slot:hover { border-color: var(--accent); }
+  .cover-slot.filled { border-style: solid; border-color: var(--green); }
+  .cover-slot img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    position: absolute; top: 0; left: 0;
+    border-radius: 50%;
+  }
+
+  .cover-slot .slot-label {
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-align: center;
+    z-index: 1;
+  }
+
+  .cover-slot.filled .slot-label { display: none; }
+
+  .btn {
+    font-family: 'Bangers', cursive;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    padding: 12px 28px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: #fbbf24; }
+  .btn-print { background: var(--accent2); color: white; }
+  .btn-print:hover { background: #2563eb; }
+  .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); }
+
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+
+  /* Instruction card above preview */
+  .tip-card {
+    background: rgba(59,130,246,0.1);
+    border: 1px solid rgba(59,130,246,0.35);
+    color: #cfe1ff;
+    padding: 14px 16px;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    margin-bottom: 18px;
+    border-radius: 4px;
+  }
+  .tip-card strong { color: #93c5fd; font-family: 'Bangers', cursive; letter-spacing: 1.5px; }
+  .tip-card code {
+    background: rgba(0,0,0,0.4);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Space Mono', monospace;
+    color: #fbbf24;
+  }
+
+  .error-box {
+    display: none;
+    background: rgba(239,68,68,0.12);
+    border: 1px solid rgba(239,68,68,0.45);
+    color: #fecaca;
+    padding: 12px 14px;
+    font-size: 0.78rem;
+    line-height: 1.55;
+    margin-top: 14px;
+    border-radius: 4px;
+    white-space: pre-wrap;
+  }
+  .error-box.visible { display: block; }
+
+  /* ===== COMIC PREVIEW ===== */
+  #comicPreview { display: none; margin-top: 32px; }
+  #comicPreview.visible { display: block; }
+
+  .comic-page {
+    width: 210mm;
+    min-height: 297mm;
+    background: white;
+    margin: 0 auto 30px;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Cover page */
+  .cover-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 30px;
+    text-align: center;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 30%, #fbbf24 60%, #f59e0b 100%);
+  }
+
+  .cover-title {
+    font-family: 'Bangers', cursive;
+    font-size: 2.8rem;
+    color: #1a1a2e;
+    letter-spacing: 4px;
+    line-height: 1.2;
+    margin-bottom: 8px;
+    text-shadow: 2px 2px 0 rgba(255,255,255,0.5);
+  }
+
+  .cover-group {
+    font-family: 'Kalam', cursive;
+    font-size: 1.4rem;
+    color: #4a2c0a;
+    margin-bottom: 30px;
+    font-style: italic;
+  }
+
+  .cover-tagline {
+    font-family: 'Kalam', cursive;
+    font-size: 1rem;
+    color: #6b4c1a;
+    margin-bottom: 30px;
+  }
+
+  .cover-photos {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    max-width: 450px;
+    margin-bottom: 30px;
+  }
+
+  .cover-char { text-align: center; }
+
+  .cover-char img {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid white;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+  }
+
+  .cover-char-name {
+    font-family: 'Bangers', cursive;
+    font-size: 0.85rem;
+    color: #1a1a2e;
+    margin-top: 6px;
+    letter-spacing: 1px;
+  }
+
+  .cover-char-state {
+    font-family: 'Comic Neue', cursive;
+    font-size: 0.7rem;
+    color: #4a2c0a;
+  }
+
+  .cover-footer {
+    font-family: 'Comic Neue', cursive;
+    font-size: 0.8rem;
+    color: #6b4c1a;
+    margin-top: auto;
+    padding-top: 20px;
+  }
+
+  /* Content pages */
+  .content-page {
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    gap: 0;
+    padding: 10mm;
+  }
+
+  .panel-container {
+    position: relative;
+    border: 3px solid #1a1a2e;
+    overflow: visible;
+    background: #f5f5f5;
+  }
+
+  .panel-container + .panel-container {
+    border-top: none;
+  }
+
+  /* Image frame clips the image (for pan/zoom) but bubbles live outside */
+  .panel-image-frame {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: #e5e5e5;
+  }
+
+  .panel-image {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform-origin: center center;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  .panel-image.dragging { cursor: grabbing; }
+
+  .panel-missing {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    font-family: Bangers, cursive;
+    color: #999;
+    font-size: 1.2rem;
+  }
+
+  .panel-number {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    background: #1a1a2e;
+    color: white;
+    font-family: 'Bangers', cursive;
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    z-index: 10;
+    letter-spacing: 1px;
+  }
+
+  /* Per-panel control strip (screen only) */
+  .panel-controls {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 30;
+    background: rgba(26,26,46,0.9);
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: #fff;
+    max-width: 180px;
+    backdrop-filter: blur(4px);
+  }
+
+  .panel-controls label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #fbbf24;
+  }
+
+  .panel-controls input[type=range] {
+    flex: 1;
+    accent-color: #f59e0b;
+  }
+
+  .panel-controls .ctrl-row {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .panel-controls button {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 1px;
+    padding: 4px 8px;
+    background: #2a2a2a;
+    color: #fff;
+    border: 1px solid #444;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+
+  .panel-controls button:hover { border-color: var(--accent); color: var(--accent); }
+  .panel-controls button.danger:hover { border-color: var(--red); color: var(--red); }
+  .panel-controls button.primary { background: var(--accent); color: #000; border-color: var(--accent); }
+  .panel-controls button.primary:hover { background: #fbbf24; color: #000; }
+
+  /* Speech bubbles */
+  .speech-bubble {
+    position: absolute;
+    background: white;
+    border: 2px solid #1a1a2e;
+    border-radius: 18px;
+    padding: 8px 12px;
+    max-width: 200px;
+    min-width: 80px;
+    font-family: 'Comic Neue', cursive;
+    font-size: 0.7rem;
+    line-height: 1.4;
+    color: #1a1a2e;
+    cursor: grab;
+    z-index: 20;
+    box-shadow: 1px 2px 4px rgba(0,0,0,0.15);
+    user-select: none;
+  }
+
+  .speech-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -12px;
+    left: 20px;
+    width: 0; height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 12px solid white;
+    filter: drop-shadow(0 1px 0 #1a1a2e);
+  }
+
+  .speech-bubble::before {
+    content: '';
+    position: absolute;
+    bottom: -15px;
+    left: 19px;
+    width: 0; height: 0;
+    border-left: 9px solid transparent;
+    border-right: 9px solid transparent;
+    border-top: 14px solid #1a1a2e;
+  }
+
+  .speech-bubble.dragging { cursor: grabbing; opacity: 0.9; }
+
+  .bubble-speaker {
+    font-weight: 700;
+    font-size: 0.65rem;
+    color: #3b82f6;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+  }
+
+  .thought-bubble {
+    border-radius: 30px;
+    border-style: dashed;
+    border-color: #7c3aed;
+    background: rgba(255,255,255,0.95);
+  }
+
+  .thought-bubble::after { border-top-color: rgba(255,255,255,0.95); }
+  .thought-bubble .bubble-speaker { color: #7c3aed; }
+
+  .caption-box {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255, 243, 191, 0.95);
+    border-top: 2px solid #1a1a2e;
+    padding: 6px 12px;
+    font-family: 'Kalam', cursive;
+    font-size: 0.7rem;
+    color: #1a1a2e;
+    font-style: italic;
+    line-height: 1.5;
+    cursor: grab;
+    z-index: 20;
+    user-select: none;
+  }
+
+  /* Print styles */
+  @media print {
+    body { background: white; }
+    header, main > .input-section, .btn-row, #previewControls, .tip-card,
+    .panel-controls { display: none !important; }
+    #comicPreview { display: block !important; }
+    .comic-page {
+      box-shadow: none;
+      margin: 0;
+      page-break-after: always;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .comic-page:last-child { page-break-after: auto; }
+  }
+
+  /* Hide controls during download capture */
+  .capturing .panel-controls,
+  .capturing .panel-number { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>COMIC COMPOSITOR V2</h1>
+    <p>Panel adjust · bubble drag · per-panel PNG · clean PDF</p>
+  </div>
+  <div class="header-badge">Tool 3 · v2</div>
+</header>
+
+<main>
+
+  <!-- STEP 1: Script JSON -->
+  <div class="input-section">
+    <div class="section-title">1 — Paste Comic Script JSON</div>
+    <p style="font-size:0.75rem;color:var(--muted);margin-bottom:10px;">
+      Paste the JSON from Tool 1 (Comic Script Generator). This provides dialogues, captions, and character info.
+    </p>
+    <textarea class="paste-area" id="scriptInput" placeholder='Paste the comic script JSON here...'></textarea>
+  </div>
+
+  <!-- STEP 2: Cover Photos -->
+  <div class="input-section">
+    <div class="section-title">2 — Character Photos (for cover page)</div>
+    <p style="font-size:0.75rem;color:var(--muted);margin-bottom:12px;">
+      Click each circle to upload a passport photo. These appear on the cover and cast pages.
+    </p>
+    <div class="cover-grid" id="coverGrid"></div>
+  </div>
+
+  <!-- STEP 3: Panel Images -->
+  <div class="input-section">
+    <div class="section-title">3 — Upload 10 Panel Images</div>
+    <p style="font-size:0.75rem;color:var(--muted);margin-bottom:12px;">
+      Click each slot to upload the generated panel image. Order matters — Panel 1 first, Panel 10 last.
+    </p>
+    <div class="upload-grid" id="panelGrid"></div>
+  </div>
+
+  <!-- Generate -->
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="buildComic()">BUILD COMIC PREVIEW</button>
+    <button class="btn btn-ghost" onclick="clearSavedLayout()">CLEAR SAVED LAYOUT</button>
+  </div>
+  <div class="error-box" id="buildErrors"></div>
+
+  <!-- Preview -->
+  <div id="comicPreview">
+    <div id="previewControls" style="display:flex;gap:12px;margin-bottom:14px;align-items:center;flex-wrap:wrap;">
+      <button class="btn btn-print" onclick="printComic()">PRINT / SAVE PDF</button>
+      <span style="font-size:0.72rem;color:var(--muted);">Drag bubbles · adjust each panel image · download individual panels.</span>
+    </div>
+
+    <div class="tip-card">
+      <strong>PDF TIP —</strong> In the browser print dialog, open <code>More settings</code> and
+      <strong>uncheck "Headers and footers"</strong> to remove the filename / URL / date strip from your PDF.
+      Also set <code>Margins = None</code> and <strong>check</strong> <code>Background graphics</code>.
+      The document title is auto-set to your comic's name so the saved PDF file is named correctly.
+    </div>
+
+    <div id="comicPages"></div>
+  </div>
+
+</main>
+
+<script>
+// ======================================================================
+// STATE
+// ======================================================================
+const defaultNames = ['Character 1','Character 2','Character 3','Character 4','Character 5','Character 6'];
+
+// In-memory storage of uploaded file data URLs
+const fileStore = {};
+
+// Per-panel state — persisted to localStorage
+// transforms[panelIdx] = { x, y, zoom }
+// bubbles[panelIdx] = [ {left, top}, ... ]  (indexed in render order)
+let transforms = {};
+let bubblePositions = {};
+
+const LS_TRANSFORMS_BASE = 'compositorV2_transforms';
+const LS_BUBBLES_BASE    = 'compositorV2_bubbles';
+let currentLayoutKey = 'default';
+
+function hashString(input) {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(16);
+}
+
+function deriveLayoutKey(script) {
+  const fingerprintSource = JSON.stringify({
+    title: script?.title || '',
+    group: script?.group || '',
+    characters: (script?.characters || []).map(c => c.name || ''),
+    panels: (script?.panels || []).map(p => ({ number: p.number, title: p.title || '' }))
+  });
+  return hashString(fingerprintSource);
+}
+
+function transformsKey() { return `${LS_TRANSFORMS_BASE}_${currentLayoutKey}`; }
+function bubblesKey()    { return `${LS_BUBBLES_BASE}_${currentLayoutKey}`; }
+
+function loadSavedLayout() {
+  try { transforms = JSON.parse(localStorage.getItem(transformsKey()) || '{}'); } catch(e){ transforms = {}; }
+  try { bubblePositions = JSON.parse(localStorage.getItem(bubblesKey()) || '{}'); } catch(e){ bubblePositions = {}; }
+}
+function saveTransforms() { localStorage.setItem(transformsKey(), JSON.stringify(transforms)); }
+function saveBubbles()    { localStorage.setItem(bubblesKey(),    JSON.stringify(bubblePositions)); }
+function clearSavedLayout() {
+  if (!confirm('Clear saved image positions and bubble placements?')) return;
+  localStorage.removeItem(transformsKey());
+  localStorage.removeItem(bubblesKey());
+  transforms = {};
+  bubblePositions = {};
+  alert('Saved layout cleared. Re-build the preview to see defaults.');
+}
+loadSavedLayout();
+
+// ======================================================================
+// UPLOAD GRIDS
+// ======================================================================
+const coverGrid = document.getElementById('coverGrid');
+for (let i = 0; i < 6; i++) {
+  const slot = document.createElement('div');
+  slot.className = 'cover-slot';
+  slot.innerHTML = `<span class="slot-label">${defaultNames[i]}</span>`;
+  slot.onclick = () => pickFile(slot, `cover-${i}`);
+  coverGrid.appendChild(slot);
+}
+
+const panelGrid = document.getElementById('panelGrid');
+for (let i = 0; i < 10; i++) {
+  const slot = document.createElement('div');
+  slot.className = 'upload-slot';
+  slot.innerHTML = `
+    <span class="slot-label">Panel ${i+1}</span>
+    <span class="slot-hint">Click to upload</span>
+  `;
+  slot.onclick = () => pickFile(slot, `panel-${i}`);
+  panelGrid.appendChild(slot);
+}
+
+function pickFile(slot, key) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      fileStore[key] = ev.target.result;
+      slot.classList.add('filled');
+      let img = slot.querySelector('img');
+      if (!img) { img = document.createElement('img'); slot.appendChild(img); }
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
+
+function updateCoverLabels(chars) {
+  const slots = coverGrid.querySelectorAll('.cover-slot');
+  chars.forEach((c, i) => {
+    if (slots[i]) slots[i].querySelector('.slot-label').textContent = c.name;
+  });
+}
+
+document.getElementById('scriptInput').addEventListener('input', function() {
+  try {
+    const raw = this.value.trim();
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    const script = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+    if (script.characters) updateCoverLabels(script.characters);
+  } catch(e) {}
+});
+
+// ======================================================================
+// BUILD COMIC
+// ======================================================================
+function parseScript() {
+  const raw = document.getElementById('scriptInput').value.trim();
+  if (!raw) return null;
+  try {
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    return JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+  } catch(e) {
+    return null;
+  }
+}
+
+function clearBuildErrors() {
+  const el = document.getElementById('buildErrors');
+  el.classList.remove('visible');
+  el.textContent = '';
+}
+
+function showBuildErrors(errors) {
+  const el = document.getElementById('buildErrors');
+  el.textContent = [
+    'Build blocked due to validation errors:',
+    ...errors.map((e, i) => `${i + 1}. ${e}`)
+  ].join('\n');
+  el.classList.add('visible');
+}
+
+function validateScriptContract(script) {
+  const errors = [];
+  if (!script || typeof script !== 'object') {
+    errors.push('Script JSON is missing or invalid.');
+    return errors;
+  }
+
+  if (!script.title || typeof script.title !== 'string') errors.push('Missing required field: title');
+  if (!script.group || typeof script.group !== 'string') errors.push('Missing required field: group');
+  if (!Array.isArray(script.characters) || script.characters.length !== 6) {
+    errors.push('characters must be an array of exactly 6 entries');
+  }
+
+  if (!Array.isArray(script.panels)) {
+    errors.push('panels must be an array');
+    return errors;
+  }
+  if (script.panels.length !== 10) {
+    errors.push(`panels must contain exactly 10 entries (found ${script.panels.length})`);
+  }
+
+  const seen = new Set();
+  script.panels.forEach((panel, idx) => {
+    const num = Number(panel && panel.number);
+    if (!Number.isInteger(num)) {
+      errors.push(`panel[${idx}] missing integer "number"`);
+      return;
+    }
+    if (num < 1 || num > 10) errors.push(`panel number out of range: ${num} (expected 1-10)`);
+    if (seen.has(num)) errors.push(`duplicate panel number: ${num}`);
+    seen.add(num);
+    if (!Array.isArray(panel.dialogues)) errors.push(`panel ${num} must include dialogues[]`);
+    if (num !== idx + 1) errors.push(`panel index mismatch at position ${idx + 1}: found panel number ${num}`);
+  });
+
+  return errors;
+}
+
+function validateBuildInputs(script) {
+  const errors = [];
+  errors.push(...validateScriptContract(script));
+  if (!script) return errors;
+
+  const missingPanels = [];
+  for (let i = 0; i < 10; i++) {
+    if (!fileStore[`panel-${i}`]) missingPanels.push(i + 1);
+  }
+  if (missingPanels.length) {
+    errors.push(`Missing panel image uploads for: ${missingPanels.join(', ')}`);
+  }
+
+  const panelNumbers = (script.panels || []).map(p => Number(p.number)).filter(Number.isInteger).sort((a, b) => a - b);
+  const expected = Array.from({ length: 10 }, (_, i) => i + 1);
+  if (panelNumbers.length === 10 && panelNumbers.join(',') !== expected.join(',')) {
+    errors.push(`Panel numbering mismatch: expected 1-10, found ${panelNumbers.join(', ')}`);
+  }
+
+  return errors;
+}
+
+function buildComic() {
+  clearBuildErrors();
+  const script = parseScript();
+  if (!script) {
+    document.getElementById('comicPreview').classList.remove('visible');
+    showBuildErrors(['Please paste valid comic script JSON before building.']);
+    return;
+  }
+
+  const validationErrors = validateBuildInputs(script);
+  if (validationErrors.length) {
+    document.getElementById('comicPreview').classList.remove('visible');
+    showBuildErrors(validationErrors);
+    return;
+  }
+
+  currentLayoutKey = deriveLayoutKey(script);
+  loadSavedLayout();
+
+  // Set document title so Save-as-PDF filename is meaningful
+  const safeTitle = `${script.title || 'Comic'} — ${script.group || 'Group'}`;
+  document.title = safeTitle;
+
+  const panels = script.panels || [];
+  const chars  = script.characters || [];
+  const pagesDiv = document.getElementById('comicPages');
+  pagesDiv.innerHTML = '';
+
+  // ===== COVER =====
+  const cover = document.createElement('div');
+  cover.className = 'comic-page cover-page';
+
+  let coverPhotosHTML = '';
+  chars.forEach((c, i) => {
+    const photoSrc = fileStore[`cover-${i}`] || '';
+    coverPhotosHTML += `
+      <div class="cover-char">
+        ${photoSrc
+          ? `<img src="${photoSrc}" alt="${c.name}">`
+          : `<div style="width:100px;height:100px;border-radius:50%;background:#ddd;display:flex;align-items:center;justify-content:center;font-size:2rem;color:#999;border:4px solid white;">?</div>`
+        }
+        <div class="cover-char-name">${c.name}</div>
+        <div class="cover-char-state">${c.state || ''}</div>
+      </div>
+    `;
+  });
+
+  cover.innerHTML = `
+    <div class="cover-title">${script.title || 'The Last Night Before Posting'}</div>
+    <div class="cover-group">${script.group || ''}</div>
+    <div class="cover-tagline">${script.tagline || ''}</div>
+    <div class="cover-photos">${coverPhotosHTML}</div>
+    <div class="cover-footer">LBSNAA Phase 5 Batch Memory</div>
+  `;
+  pagesDiv.appendChild(cover);
+
+  // ===== CAST =====
+  const castPage = document.createElement('div');
+  castPage.className = 'comic-page cover-page';
+  castPage.style.background = 'linear-gradient(135deg, #fefce8 0%, #fef9c3 100%)';
+  castPage.style.justifyContent = 'flex-start';
+  castPage.style.paddingTop = '50px';
+
+  let castHTML = `
+    <div style="font-family:'Bangers',cursive;font-size:2rem;color:#1a1a2e;letter-spacing:4px;margin-bottom:30px;">THE CAST</div>
+    <div style="font-family:'Kalam',cursive;font-size:0.95rem;color:#4a2c0a;margin-bottom:30px;font-style:italic;">${script.intro || ''}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px 40px;max-width:500px;width:100%;">
+  `;
+  chars.forEach((c, i) => {
+    const photoSrc = fileStore[`cover-${i}`] || '';
+    castHTML += `
+      <div style="display:flex;align-items:center;gap:12px;">
+        ${photoSrc
+          ? `<img src="${photoSrc}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:3px solid #1a1a2e;flex-shrink:0;">`
+          : `<div style="width:60px;height:60px;border-radius:50%;background:#ddd;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:#999;border:3px solid #1a1a2e;">?</div>`
+        }
+        <div>
+          <div style="font-family:'Bangers',cursive;font-size:0.9rem;color:#1a1a2e;letter-spacing:1px;">${c.name}</div>
+          <div style="font-family:'Comic Neue',cursive;font-size:0.7rem;color:#6b4c1a;">${c.state || ''}</div>
+          <div style="font-family:'Kalam',cursive;font-size:0.7rem;color:#888;font-style:italic;">${c.role || c.quirk || ''}</div>
+        </div>
+      </div>
+    `;
+  });
+  castHTML += '</div>';
+  castPage.innerHTML = castHTML;
+  pagesDiv.appendChild(castPage);
+
+  // ===== CONTENT PAGES =====
+  for (let p = 0; p < panels.length; p += 2) {
+    const page = document.createElement('div');
+    page.className = 'comic-page content-page';
+
+    for (let j = 0; j < 2; j++) {
+      const idx = p + j;
+      if (idx >= panels.length) break;
+      page.appendChild(buildPanel(panels[idx], idx));
+    }
+    pagesDiv.appendChild(page);
+  }
+
+  // ===== CLOSING =====
+  const closingPage = document.createElement('div');
+  closingPage.className = 'comic-page cover-page';
+  closingPage.style.background = 'linear-gradient(135deg, #1a1a2e 0%, #2d2b55 50%, #1a1a2e 100%)';
+  closingPage.style.justifyContent = 'center';
+
+  const charNamesList = chars.map(c => c.name).join(' · ');
+  closingPage.innerHTML = `
+    <div style="font-family:'Kalam',cursive;font-size:1.3rem;color:#fbbf24;line-height:2;max-width:450px;text-align:center;">
+      To the officers who survived fog, PT, case studies, mess food, and still found time to sneak out for chai...
+    </div>
+    <div style="margin:30px 0;width:60px;height:2px;background:#fbbf24;"></div>
+    <div style="font-family:'Comic Neue',cursive;font-size:0.85rem;color:#e8e8e8;max-width:400px;text-align:center;line-height:1.8;margin-bottom:30px;">
+      ${charNamesList}
+    </div>
+    <div style="font-family:'Bangers',cursive;font-size:1.5rem;color:#fbbf24;letter-spacing:4px;margin-bottom:10px;">
+      ${script.group || ''}
+    </div>
+    <div style="font-family:'Comic Neue',cursive;font-size:0.75rem;color:#888;margin-bottom:6px;">
+      LBSNAA · Phase 5 · Mussoorie
+    </div>
+    <div style="font-family:'Comic Neue',cursive;font-size:0.65rem;color:#666;margin-top:20px;max-width:350px;text-align:center;">
+      A personalised fictional comic memento created for internal batch memory purposes.
+    </div>
+  `;
+  pagesDiv.appendChild(closingPage);
+
+  document.getElementById('comicPreview').classList.add('visible');
+  document.getElementById('comicPreview').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ======================================================================
+// BUILD A SINGLE PANEL
+// ======================================================================
+function buildPanel(panel, idx) {
+  const panelDiv = document.createElement('div');
+  panelDiv.className = 'panel-container';
+  panelDiv.dataset.panelIdx = idx;
+
+  // --- image frame (clips the image; bubbles live outside) ---
+  const frame = document.createElement('div');
+  frame.className = 'panel-image-frame';
+  panelDiv.appendChild(frame);
+
+  const imgSrc = fileStore[`panel-${idx}`];
+  let imgEl = null;
+  if (imgSrc) {
+    imgEl = document.createElement('img');
+    imgEl.className = 'panel-image';
+    imgEl.src = imgSrc;
+    imgEl.draggable = false;
+    frame.appendChild(imgEl);
+    applyTransform(imgEl, idx);
+    makeImageDraggable(imgEl, idx);
+  } else {
+    frame.innerHTML = `<div class="panel-missing">Panel ${idx+1} — No Image</div>`;
+  }
+
+  // --- panel number badge ---
+  const numBadge = document.createElement('div');
+  numBadge.className = 'panel-number';
+  numBadge.textContent = `PANEL ${panel.number || idx+1}`;
+  panelDiv.appendChild(numBadge);
+
+  // --- per-panel controls ---
+  const controls = document.createElement('div');
+  controls.className = 'panel-controls';
+  controls.innerHTML = `
+    <label>ZOOM
+      <input type="range" min="0.5" max="2.5" step="0.01" value="${(transforms[idx]?.zoom) ?? 1}" data-zoom>
+      <span data-zoomval>${Math.round(((transforms[idx]?.zoom) ?? 1) * 100)}%</span>
+    </label>
+    <div class="ctrl-row">
+      <button data-reset-img class="danger">Reset Image</button>
+      <button data-reset-bubbles class="danger">Reset Bubbles</button>
+    </div>
+    <div class="ctrl-row">
+      <button data-download class="primary">↓ Download PNG</button>
+    </div>
+    <div style="font-size:0.55rem;color:#bbb;line-height:1.4;margin-top:2px;">
+      Drag image to pan. Drag bubbles to reposition.
+    </div>
+  `;
+  panelDiv.appendChild(controls);
+
+  const zoomInput = controls.querySelector('[data-zoom]');
+  const zoomVal = controls.querySelector('[data-zoomval]');
+
+  zoomInput.addEventListener('input', () => {
+    if (!imgEl) return;
+    const z = parseFloat(zoomInput.value);
+    transforms[idx] = { ...(transforms[idx] || {x:0,y:0}), zoom: z };
+    zoomVal.textContent = Math.round(z * 100) + '%';
+    applyTransform(imgEl, idx);
+    saveTransforms();
+  });
+
+  controls.querySelector('[data-reset-img]').addEventListener('click', () => {
+    if (!imgEl) return;
+    transforms[idx] = { x: 0, y: 0, zoom: 1 };
+    zoomInput.value = 1;
+    zoomVal.textContent = '100%';
+    applyTransform(imgEl, idx);
+    saveTransforms();
+  });
+
+  controls.querySelector('[data-reset-bubbles]').addEventListener('click', () => {
+    delete bubblePositions[idx];
+    saveBubbles();
+    // remove and re-add bubbles with default positions
+    panelDiv.querySelectorAll('.speech-bubble, .caption-box').forEach(el => el.remove());
+    addBubblesAndCaption(panel, idx, panelDiv);
+  });
+
+  controls.querySelector('[data-download]').addEventListener('click', () => {
+    downloadPanel(panelDiv, panel, idx);
+  });
+
+  // --- bubbles + caption ---
+  addBubblesAndCaption(panel, idx, panelDiv);
+
+  return panelDiv;
+}
+
+function applyTransform(imgEl, idx) {
+  const t = transforms[idx] || { x: 0, y: 0, zoom: 1 };
+  const x = t.x || 0;
+  const y = t.y || 0;
+  const z = t.zoom || 1;
+  imgEl.style.transform =
+    `translate(-50%, -50%) translate(${x}px, ${y}px) scale(${z})`;
+}
+
+function makeImageDraggable(imgEl, idx) {
+  let startX, startY, startTx, startTy;
+
+  const onDown = (clientX, clientY) => {
+    imgEl.classList.add('dragging');
+    startX = clientX;
+    startY = clientY;
+    const t = transforms[idx] || { x: 0, y: 0, zoom: 1 };
+    startTx = t.x || 0;
+    startTy = t.y || 0;
+  };
+  const onMove = (clientX, clientY) => {
+    const dx = clientX - startX;
+    const dy = clientY - startY;
+    transforms[idx] = {
+      ...(transforms[idx] || { zoom: 1 }),
+      x: startTx + dx,
+      y: startTy + dy,
+    };
+    applyTransform(imgEl, idx);
+  };
+  const onUp = () => {
+    imgEl.classList.remove('dragging');
+    saveTransforms();
+  };
+
+  imgEl.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    onDown(e.clientX, e.clientY);
+    const move = (ev) => onMove(ev.clientX, ev.clientY);
+    const up = () => {
+      onUp();
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+    };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+  });
+
+  imgEl.addEventListener('touchstart', (e) => {
+    const t = e.touches[0];
+    onDown(t.clientX, t.clientY);
+    const move = (ev) => { ev.preventDefault(); const tt = ev.touches[0]; onMove(tt.clientX, tt.clientY); };
+    const up = () => {
+      onUp();
+      document.removeEventListener('touchmove', move);
+      document.removeEventListener('touchend', up);
+    };
+    document.addEventListener('touchmove', move, { passive: false });
+    document.addEventListener('touchend', up);
+  });
+}
+
+// ======================================================================
+// BUBBLES
+// ======================================================================
+function addBubblesAndCaption(panel, idx, panelDiv) {
+  const savedBubbles = bubblePositions[idx] || [];
+  let bubbleCounter = 0;
+
+  // Dialogue bubbles
+  if (panel.dialogues && panel.dialogues.length) {
+    panel.dialogues.forEach((d, di) => {
+      const bubble = document.createElement('div');
+      const isDream = panel.dreamOf && d.character &&
+        panel.dreamOf.toLowerCase().includes(d.character.split(' ')[0].toLowerCase());
+      bubble.className = 'speech-bubble' + (isDream ? ' thought-bubble' : '');
+      bubble.innerHTML =
+        `<div class="bubble-speaker">${d.character || 'NARRATOR'}</div>${d.line || ''}`;
+
+      const bIdx = bubbleCounter++;
+      const saved = savedBubbles[bIdx];
+      if (saved) {
+        bubble.style.left = saved.left;
+        bubble.style.top  = saved.top;
+      } else {
+        const leftPercent = 5 + (di * 30) % 70;
+        const topPercent  = 5 + (di * 12) % 30;
+        bubble.style.left = leftPercent + '%';
+        bubble.style.top  = topPercent + '%';
+      }
+      makeBubbleDraggable(bubble, panelDiv, idx, bIdx);
+      panelDiv.appendChild(bubble);
+    });
+  }
+
+  // Dream bubble
+  if (panel.dreamOf) {
+    const parts = panel.dreamOf.split('|');
+    const dreamer = parts[0] || '';
+    const dream   = parts[1] || panel.dreamOf;
+    const hasDreamDialogue = panel.dialogues && panel.dialogues.some(d =>
+      d.character && dreamer &&
+      d.character.toLowerCase().includes(dreamer.split(' ')[0].toLowerCase())
+    );
+    if (!hasDreamDialogue || parts.length > 1) {
+      const tb = document.createElement('div');
+      tb.className = 'speech-bubble thought-bubble';
+      tb.innerHTML = `<div class="bubble-speaker">${dreamer}'s Dream</div>${dream}`;
+
+      const bIdx = bubbleCounter++;
+      const saved = savedBubbles[bIdx];
+      if (saved) {
+        tb.style.left = saved.left;
+        tb.style.top  = saved.top;
+      } else {
+        tb.style.right = '5%';
+        tb.style.top   = '10%';
+        tb.style.left  = 'auto';
+      }
+      makeBubbleDraggable(tb, panelDiv, idx, bIdx);
+      panelDiv.appendChild(tb);
+    }
+  }
+
+  // Caption
+  if (panel.caption) {
+    const cap = document.createElement('div');
+    cap.className = 'caption-box';
+    cap.textContent = panel.caption;
+    const bIdx = bubbleCounter++;
+    const saved = savedBubbles[bIdx];
+    if (saved) {
+      cap.style.left   = saved.left;
+      cap.style.top    = saved.top;
+      cap.style.right  = 'auto';
+      cap.style.bottom = 'auto';
+    }
+    makeBubbleDraggable(cap, panelDiv, idx, bIdx);
+    panelDiv.appendChild(cap);
+  }
+}
+
+function makeBubbleDraggable(el, container, panelIdx, bubbleIdx) {
+  let startX, startY, startLeft, startTop;
+
+  const persist = () => {
+    if (!bubblePositions[panelIdx]) bubblePositions[panelIdx] = [];
+    bubblePositions[panelIdx][bubbleIdx] = {
+      left: el.style.left,
+      top:  el.style.top,
+    };
+    saveBubbles();
+  };
+
+  el.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    el.classList.add('dragging');
+    startX = e.clientX; startY = e.clientY;
+    const style = window.getComputedStyle(el);
+    startLeft = parseInt(style.left) || 0;
+    startTop  = parseInt(style.top)  || 0;
+
+    function onMove(ev) {
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      el.style.left   = (startLeft + dx) + 'px';
+      el.style.top    = (startTop  + dy) + 'px';
+      el.style.right  = 'auto';
+      el.style.bottom = 'auto';
+    }
+    function onUp() {
+      el.classList.remove('dragging');
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      persist();
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+
+  el.addEventListener('touchstart', (e) => {
+    const touch = e.touches[0];
+    el.classList.add('dragging');
+    startX = touch.clientX; startY = touch.clientY;
+    const style = window.getComputedStyle(el);
+    startLeft = parseInt(style.left) || 0;
+    startTop  = parseInt(style.top)  || 0;
+
+    function onMove(ev) {
+      ev.preventDefault();
+      const t = ev.touches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      el.style.left   = (startLeft + dx) + 'px';
+      el.style.top    = (startTop  + dy) + 'px';
+      el.style.right  = 'auto';
+      el.style.bottom = 'auto';
+    }
+    function onUp() {
+      el.classList.remove('dragging');
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onUp);
+      persist();
+    }
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onUp);
+  });
+}
+
+// ======================================================================
+// DOWNLOAD A SINGLE PANEL (panel + bubbles, no book chrome)
+// ======================================================================
+async function downloadPanel(panelDiv, panel, idx) {
+  if (typeof html2canvas === 'undefined') {
+    alert('html2canvas failed to load. Check your internet connection and refresh.');
+    return;
+  }
+  panelDiv.classList.add('capturing');
+  try {
+    const canvas = await html2canvas(panelDiv, {
+      backgroundColor: null,
+      scale: 2,
+      useCORS: true,
+      logging: false,
+    });
+    const link = document.createElement('a');
+    const safeTitle = (panel.title || `panel_${idx+1}`).replace(/[^\w\- ]+/g, '').replace(/\s+/g,'_');
+    link.download = `panel_${String(idx+1).padStart(2,'0')}_${safeTitle}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch (err) {
+    console.error(err);
+    alert('Could not export panel — see console for details.');
+  } finally {
+    panelDiv.classList.remove('capturing');
+  }
+}
+
+// ======================================================================
+// PRINT
+// ======================================================================
+function printComic() {
+  // Document title is already set in buildComic() so the PDF filename is clean.
+  // Give the user a quick reminder the first time they print.
+  if (!sessionStorage.getItem('printReminded')) {
+    sessionStorage.setItem('printReminded', '1');
+    alert(
+      'In the print dialog:\n\n' +
+      '  • Destination → Save as PDF\n' +
+      '  • Margins → None\n' +
+      '  • ✓ Background graphics\n' +
+      '  • More settings → UNCHECK "Headers and footers"\n\n' +
+      'This removes the filename/URL/date from the top/bottom of every PDF page.'
+    );
+  }
+  window.print();
+}
+</script>
+</body>
+</html>

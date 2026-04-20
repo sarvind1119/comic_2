@@ -1,0 +1,43 @@
+# OS / editor noise
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python runtime/cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Local env / secrets
+.env
+.env.*
+*.key
+*.pem
+
+# Project-local assistant/tool state
+.claude/
+Archive/
+
+# Generated exports and media outputs
+output/
+exports/
+generated/
+renders/
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.zip
+
+# Logs and temp files
+*.log
+tmp/
+temp/

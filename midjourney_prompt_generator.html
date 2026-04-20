@@ -1,0 +1,2099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comic Panel → Midjourney Prompts</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --surface: #161616;
+    --surface2: #1f1f1f;
+    --border: #2a2a2a;
+    --accent: #f59e0b;
+    --accent2: #3b82f6;
+    --green: #22c55e;
+    --red: #ef4444;
+    --text: #e8e8e8;
+    --muted: #666;
+    --ink: #f0ebe0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    background-image: radial-gradient(ellipse at 20% 0%, rgba(245,158,11,0.06) 0%, transparent 60%),
+                      radial-gradient(ellipse at 80% 100%, rgba(59,130,246,0.06) 0%, transparent 60%);
+    font-family: 'Space Mono', monospace;
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 28px 28px 24px;
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .logo-block h1 {
+    font-family: 'Bangers', cursive;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    letter-spacing: 3px;
+    color: var(--accent);
+    line-height: 1;
+    text-shadow: 0 0 30px rgba(245,158,11,0.3);
+  }
+
+  .logo-block p {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .header-badge {
+    margin-left: auto;
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.3);
+    color: var(--accent);
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 2px;
+  }
+
+  main {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+
+  /* INPUT SECTION */
+  .input-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px;
+    margin-bottom: 28px;
+  }
+
+  .section-title {
+    font-family: 'Bangers', cursive;
+    font-size: 1rem;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* CHARACTER SETUP */
+  .char-setup-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .char-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 12px;
+    position: relative;
+  }
+
+  .char-row::before {
+    content: attr(data-num);
+    position: absolute;
+    top: -10px; left: 10px;
+    background: var(--accent);
+    color: #000;
+    font-family: 'Bangers', cursive;
+    font-size: 0.85rem;
+    width: 20px; height: 20px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+  }
+
+  .char-row label {
+    display: block;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .char-row input, .char-row select, .char-row textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    padding: 6px 10px;
+    outline: none;
+  }
+
+  .char-row input:focus, .char-row textarea:focus {
+    border-color: var(--accent);
+  }
+
+  .char-row .full-width {
+    grid-column: 1 / -1;
+  }
+
+  /* STYLE CONTROLS */
+  .style-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .style-field label {
+    display: block;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+
+  .style-field select, .style-field input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    padding: 8px 10px;
+    outline: none;
+  }
+
+  .style-field select:focus, .style-field input:focus {
+    border-color: var(--accent2);
+  }
+
+  /* PASTE AREA */
+  .paste-area {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    padding: 14px;
+    min-height: 120px;
+    resize: vertical;
+    outline: none;
+    line-height: 1.6;
+  }
+
+  .paste-area:focus { border-color: var(--accent2); }
+  .paste-area::placeholder { color: var(--muted); }
+
+  /* BUTTONS */
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+
+  .btn {
+    font-family: 'Bangers', cursive;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    padding: 12px 28px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+  }
+
+  .btn-primary:hover { background: #fbbf24; transform: translateY(-1px); }
+  .btn-primary:disabled { background: #444; color: #888; cursor: not-allowed; transform: none; }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--accent2);
+    border: 1px solid var(--accent2);
+  }
+
+  .btn-secondary:hover { background: rgba(59,130,246,0.1); }
+
+  /* LOADING */
+  .loading-bar {
+    display: none;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent));
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    margin-top: 16px;
+  }
+  .loading-bar.visible { display: block; }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .loading-text {
+    display: none;
+    font-size: 0.75rem;
+    color: var(--accent);
+    margin-top: 10px;
+    letter-spacing: 1px;
+    animation: blink 1s ease-in-out infinite;
+  }
+  .loading-text.visible { display: block; }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ERROR */
+  .error-box {
+    display: none;
+    background: rgba(239,68,68,0.1);
+    border: 1px solid var(--red);
+    color: var(--red);
+    font-size: 0.78rem;
+    padding: 12px 16px;
+    margin-top: 14px;
+  }
+  .error-box.visible { display: block; }
+
+  /* OUTPUT */
+  #output { display: none; margin-top: 32px; }
+  #output.visible { display: block; }
+
+  .output-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .output-title {
+    font-family: 'Bangers', cursive;
+    font-size: 1.4rem;
+    letter-spacing: 3px;
+    color: var(--green);
+  }
+
+  .btn-copy-all {
+    font-family: 'Bangers', cursive;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    background: var(--green);
+    color: #000;
+    border: none;
+    padding: 10px 22px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-copy-all:hover { background: #16a34a; color: white; }
+
+  /* PROMPT CARDS */
+  .prompt-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .prompt-card:hover { border-color: var(--accent); }
+
+  .prompt-card-header {
+    background: var(--surface2);
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel-num {
+    font-family: 'Bangers', cursive;
+    font-size: 1rem;
+    letter-spacing: 1px;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .panel-title-text {
+    font-size: 0.78rem;
+    color: var(--text);
+    font-weight: 700;
+    flex: 1;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .panel-tag-badge {
+    font-size: 0.65rem;
+    background: rgba(59,130,246,0.15);
+    border: 1px solid rgba(59,130,246,0.3);
+    color: var(--accent2);
+    padding: 3px 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-radius: 2px;
+  }
+
+  .prompt-card-body {
+    padding: 16px 18px;
+  }
+
+  .scene-note {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-bottom: 10px;
+    font-style: italic;
+  }
+
+  .prompt-text {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: #c8e6c9;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 1.7;
+    padding: 14px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-bottom: 10px;
+    cursor: text;
+    user-select: all;
+  }
+
+  .prompt-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-copy-one {
+    font-family: 'Bangers', cursive;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid rgba(245,158,11,0.4);
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-copy-one:hover { background: rgba(245,158,11,0.1); }
+  .btn-copy-one.copied { color: var(--green); border-color: rgba(34,197,94,0.4); }
+
+  .char-tag-list {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .char-tag {
+    font-size: 0.65rem;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 3px 8px;
+    letter-spacing: 1px;
+    border-radius: 2px;
+  }
+
+  /* TIPS BLOCK */
+  .tips-block {
+    background: rgba(245,158,11,0.05);
+    border: 1px solid rgba(245,158,11,0.2);
+    padding: 18px 20px;
+    margin-top: 28px;
+  }
+
+  .tips-block h3 {
+    font-family: 'Bangers', cursive;
+    letter-spacing: 2px;
+    color: var(--accent);
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+
+  .tips-block ul {
+    list-style: none;
+    font-size: 0.78rem;
+    line-height: 2;
+    color: #aaa;
+  }
+
+  .tips-block ul li::before {
+    content: '▸ ';
+    color: var(--accent);
+  }
+
+  /* TABS */
+  .tab-row {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+
+  .tab-btn {
+    font-family: 'Bangers', cursive;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    padding: 10px 20px;
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .auto-status {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    letter-spacing: 1px;
+    border-radius: 2px;
+    text-transform: uppercase;
+  }
+  .auto-status.queued { color: #94a3b8; border-color: rgba(148,163,184,0.4); }
+  .auto-status.generating { color: #f59e0b; border-color: rgba(245,158,11,0.4); }
+  .auto-status.review { color: #22c55e; border-color: rgba(34,197,94,0.5); }
+  .auto-status.approved { color: #16a34a; border-color: rgba(22,163,74,0.6); }
+  .auto-status.fallback_mj { color: #3b82f6; border-color: rgba(59,130,246,0.5); }
+  .auto-status.failed { color: #ef4444; border-color: rgba(239,68,68,0.5); }
+
+  .auto-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .auto-row:last-child { border-bottom: none; }
+
+  .auto-preview {
+    width: 170px;
+    aspect-ratio: 3/4;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    background: #0b0b0b;
+  }
+
+  /* API KEY */
+  .api-key-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .api-key-row input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    padding: 9px 14px;
+    outline: none;
+  }
+
+  .api-key-row input:focus { border-color: var(--accent2); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-block">
+    <h1>✦ PANEL → PROMPT</h1>
+    <p>Comic Script to Midjourney Image Prompts · LBSNAA Phase 5</p>
+  </div>
+  <div class="header-badge">AI-Powered Generator</div>
+</header>
+
+<main>
+
+  <!-- STEP 0: API KEY -->
+  <div class="input-section">
+    <div class="section-title">0 — Anthropic API Key</div>
+    <div class="api-key-row">
+      <input type="password" id="apiKey" placeholder="sk-ant-api03-...  (used locally, never stored)">
+    </div>
+    <div style="margin-top:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <button onclick="clearAllData()" style="font-family:'Space Mono',monospace;font-size:0.7rem;background:var(--red);color:white;border:none;padding:6px 14px;cursor:pointer;border-radius:2px;letter-spacing:1px;">CLEAR ALL SAVED DATA</button>
+      <span style="font-size:0.65rem;color:var(--muted);">Clears all participant names, photos, and URLs from this browser. Use after final PDF is done.</span>
+    </div>
+  </div>
+
+  <!-- STEP 1: CHARACTER DESCRIPTIONS -->
+  <div class="input-section">
+    <div class="section-title">1 — Character Visual Descriptions</div>
+    <p style="font-size:0.75rem;color:var(--muted);margin-bottom:16px;line-height:1.7;">
+      Midjourney needs consistent visual descriptions per character to keep faces/clothing the same across panels.
+      Fill in what each person looks like — this gets embedded into every panel prompt.
+      <br><strong style="color:var(--red);">WARNING: Discord CDN URLs expire in ~24hrs! Use Imgur for permanent photo links.</strong>
+    </p>
+    <div class="char-setup-grid" id="charGrid"></div>
+  </div>
+
+  <!-- STEP 1.5: MJ CHARACTER SHEET URLs -->
+  <div class="input-section">
+    <div class="section-title">1b — Midjourney Character Sheet URLs</div>
+    <p style="font-size:0.75rem;color:var(--muted);margin-bottom:16px;line-height:1.7;">
+      After running character sheet prompts in Midjourney, paste each upscaled image URL here.
+      These get auto-applied as <code style="color:var(--accent);">--sref</code> to all panel prompts for style consistency.
+    </p>
+    <div class="char-setup-grid" id="srefGrid"></div>
+  </div>
+
+  <!-- STEP 2: ART STYLE -->
+  <div class="input-section">
+    <div class="section-title">2 — Art Style Settings</div>
+    <div class="style-grid">
+      <div class="style-field">
+        <label>Comic Style</label>
+        <select id="stylePreset">
+          <option value="warm_animated" selected>Warm Hand-Painted Animation (Cute & Dreamy)</option>
+          <option value="amul_poster">Amul Poster Style (Bold Indian)</option>
+          <option value="manga_warm">Manga — Warm & Expressive</option>
+          <option value="webtoon">Webtoon (Clean Digital)</option>
+          <option value="watercolor">Watercolour Graphic Novel</option>
+          <option value="retro_indian">Retro Bollywood Poster</option>
+          <option value="custom">Custom (enter below)</option>
+        </select>
+      </div>
+      <div class="style-field">
+        <label>Aspect Ratio</label>
+        <select id="aspectRatio">
+          <option value="--ar 3:4">3:4 (Portrait — Print)</option>
+          <option value="--ar 4:3">4:3 (Landscape)</option>
+          <option value="--ar 1:1">1:1 (Square)</option>
+          <option value="--ar 16:9">16:9 (Widescreen)</option>
+        </select>
+      </div>
+      <div class="style-field">
+        <label>Stylize Level</label>
+        <select id="stylize">
+          <option value="--s 300">300 — Balanced</option>
+          <option value="--s 500">500 — More Artistic</option>
+          <option value="--s 150">150 — More Literal</option>
+          <option value="--s 750">750 — Highly Stylized</option>
+        </select>
+      </div>
+      <div class="style-field">
+        <label>MJ Version</label>
+        <select id="mjVersion">
+          <option value="--v 6.1">v6.1 (Latest)</option>
+          <option value="--v 6">v6</option>
+          <option value="--niji 6">Niji 6 (Anime)</option>
+        </select>
+      </div>
+      <div class="style-field" style="grid-column: 1/-1;">
+        <label>Custom Style Override (optional)</label>
+        <input type="text" id="customStyle" placeholder="e.g. Indian graphic novel, bold ink lines, flat colors, expressive faces, reminiscent of Amar Chitra Katha">
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: SCRIPT INPUT -->
+  <div class="input-section">
+    <div class="section-title">3 — Paste Comic Script JSON</div>
+    <p style="font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">
+      Copy the raw JSON from the Comic Script Generator (use the "Copy Script" button, then paste the JSON portion here).
+      Or paste the full text — the tool will extract the panels automatically.
+    </p>
+    <textarea class="paste-area" id="scriptInput" placeholder='Paste the comic script JSON here...
+{ "title": "The Last Night Before Posting", "group": "The Cool Squad", "panels": [...] }'></textarea>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="generateBtn" onclick="generatePrompts()">
+        ✦ Generate Midjourney Prompts
+      </button>
+      <button class="btn btn-secondary" onclick="loadSample()">Load Sample (The Cool Squad)</button>
+    </div>
+    <div class="loading-bar" id="loadingBar"></div>
+    <div class="loading-text" id="loadingText">✦ GENERATING PROMPTS...</div>
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <!-- OUTPUT -->
+  <div id="output">
+    <div class="output-header">
+      <div class="output-title" id="outputTitle">✦ PROMPTS READY</div>
+      <button class="btn-copy-all" onclick="copyAll()">⊞ COPY ALL PROMPTS</button>
+    </div>
+
+    <div class="tab-row">
+      <button class="tab-btn active" onclick="switchTab('individual')">Individual Panels</button>
+      <button class="tab-btn" onclick="switchTab('bulk')">Bulk Copy</button>
+      <button class="tab-btn" onclick="switchTab('characters')">Character Sheets</button>
+      <button class="tab-btn" onclick="switchTab('scenepacket')">Scene Packet</button>
+      <button class="tab-btn" onclick="switchTab('automation')">Automation</button>
+    </div>
+
+    <div class="tab-content active" id="tab-individual">
+      <div id="promptList"></div>
+    </div>
+
+    <div class="tab-content" id="tab-bulk">
+      <p style="font-size:0.75rem;color:var(--muted);margin-bottom:12px;">All prompts in one block — paste into Midjourney one by one or use a bulk tool.</p>
+      <div class="prompt-text" id="bulkText" style="min-height:300px;"></div>
+      <button class="btn btn-secondary" style="margin-top:10px;" onclick="copyBulk()">Copy All</button>
+    </div>
+
+    <div class="tab-content" id="tab-characters">
+      <p style="font-size:0.75rem;color:var(--muted);margin-bottom:16px;">
+        Run each prompt in Midjourney → upscale the best result → paste the image URL below.
+        Then click <strong style="color:var(--accent);">Apply --sref to Panel Prompts</strong> to lock in style consistency.
+      </p>
+      <div id="charSheets"></div>
+    </div>
+
+    <div class="tab-content" id="tab-scenepacket">
+      <p style="font-size:0.75rem;color:var(--muted);margin-bottom:12px;line-height:1.7;">
+        Copy this packet into ChatGPT (or any manual image workflow) to keep scene continuity, naming, and panel order deterministic.
+      </p>
+      <div class="prompt-text" id="scenePacketText" style="min-height:320px;"></div>
+      <button class="btn btn-secondary" style="margin-top:10px;" onclick="copyScenePacket()">Copy Scene Packet</button>
+    </div>
+
+    <div class="tab-content" id="tab-automation">
+      <div class="prompt-card" style="margin-bottom:14px;">
+        <div class="prompt-card-header">
+          <span class="panel-num" style="color:var(--accent2);">RUNNER</span>
+          <span class="panel-title-text">OpenAI Auto Scene Generation (Hybrid Mode)</span>
+        </div>
+        <div class="prompt-card-body">
+          <div class="style-grid" style="margin-bottom:10px;">
+            <div class="style-field">
+              <label>OpenAI API Key</label>
+              <input type="password" id="openaiApiKey" placeholder="sk-... (not stored)">
+            </div>
+            <div class="style-field">
+              <label>Model Tier</label>
+              <select id="autoModelTier">
+                <option value="balanced" selected>Balanced quality</option>
+                <option value="high">Highest quality</option>
+                <option value="economy">Cost-saving</option>
+              </select>
+            </div>
+            <div class="style-field">
+              <label>Scoring Model</label>
+              <select id="autoScoreModel">
+                <option value="gpt-4.1-mini" selected>gpt-4.1-mini</option>
+                <option value="gpt-4.1">gpt-4.1</option>
+              </select>
+            </div>
+            <div class="style-field">
+              <label>Concurrency</label>
+              <input type="text" value="2 (fixed for v1)" readonly>
+            </div>
+          </div>
+          <div class="btn-row" style="margin-top:6px;">
+            <button class="btn btn-secondary" onclick="prepareAutomationJobs()">Prepare Jobs</button>
+            <button class="btn btn-primary" onclick="startAutomationRun()">Run Automation</button>
+            <button class="btn btn-secondary" onclick="pauseAutomationRun()">Pause</button>
+            <button class="btn btn-secondary" onclick="exportAutomationBundle()">Export Bundle</button>
+            <button class="btn btn-secondary" onclick="downloadJobsState()">Download scene_jobs.json</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('jobsImportInput').click()">Load scene_jobs.json</button>
+            <input id="jobsImportInput" type="file" accept="application/json" style="display:none" onchange="loadJobsStateFile(event)">
+          </div>
+          <div class="scene-note" id="autoSummary" style="margin-top:10px;">No jobs prepared yet.</div>
+        </div>
+      </div>
+
+      <div class="prompt-card" style="margin-bottom:14px;">
+        <div class="prompt-card-header">
+          <span class="panel-num" style="color:var(--green);">REVIEW</span>
+          <span class="panel-title-text">Human Approval Queue</span>
+        </div>
+        <div class="prompt-card-body" id="automationReviewList">
+          <div class="scene-note">Prepare jobs and run automation to populate review items.</div>
+        </div>
+      </div>
+
+      <div class="prompt-card">
+        <div class="prompt-card-header">
+          <span class="panel-num">JOBS</span>
+          <span class="panel-title-text">Panel Job Board</span>
+        </div>
+        <div class="prompt-card-body" id="automationJobsList">
+          <div class="scene-note">No jobs available.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tips-block">
+      <h3>✦ Midjourney Tips for Consistent Comics</h3>
+      <ul>
+        <li>Generate character sheet prompts FIRST → save those image URLs</li>
+        <li>Use <code style="color:var(--accent);">--cref [image_url]</code> in panel prompts to maintain consistent faces</li>
+        <li>Use <code style="color:var(--accent);">--style ref [url]</code> after generating one good panel to keep style consistent</li>
+        <li>Dream bubble panels: generate with <code style="color:var(--accent);">--ar 1:1</code> then composite into the main panel</li>
+        <li>For group shots (Panel 10): add each character description separated by commas</li>
+        <li>If faces drift: regenerate with <code style="color:var(--accent);">--cw 100</code> (character weight) for stronger reference</li>
+      </ul>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const STYLE_PRESETS = {
+  warm_animated: "warm hand-painted Indian hill-station animation style, soft watercolour backgrounds, expressive cute cartoon faces, gentle golden lighting, nostalgic atmosphere, delicate linework, whimsical and heartfelt illustration",
+  amul_poster: "Indian comic book style, bold black ink outlines, flat vibrant colors, expressive cartoon faces, inspired by Amar Chitra Katha and Amul butter ads, warm palette, clean panel composition",
+  manga_warm: "warm manga style, expressive faces, bold linework, screentone shading, emotional storytelling, soft background wash, Japanese comic book aesthetic",
+  webtoon: "webtoon style illustration, clean digital linework, soft cel shading, warm color palette, expressive characters, professional graphic novel",
+  watercolor: "watercolor graphic novel style, loose expressive lines, translucent washes, warm earthy tones, painterly backgrounds, emotional illustration",
+  retro_indian: "retro Indian graphic novel, bold poster colors, vintage 1970s aesthetic, expressive hand-drawn characters, nostalgic Bollywood illustration style",
+  custom: ""
+};
+
+const PHOTO_ALLOWED_HOSTS = ['imgur.com', 'i.imgur.com'];
+const MIDJOURNEY_ALLOWED_HOST_SNIPPETS = ['midjourney.com'];
+const AUTO_STATE_KEY = 'mjPromptGen_auto_state_v1';
+
+const AUTO_STATUS = {
+  QUEUED: 'queued',
+  GENERATING: 'generating',
+  REVIEW: 'review',
+  APPROVED: 'approved',
+  FALLBACK_MJ: 'fallback_mj',
+  FAILED: 'failed',
+};
+
+let automationState = {
+  running: false,
+  paused: false,
+  activeCount: 0,
+  maxCandidates: 3,
+  windowSize: 2,
+  character_lock: null,
+  jobs: [],
+};
+
+window._latestPrompts = [];
+window._latestPanels = [];
+window._latestScript = null;
+window._latestChars = [];
+window._latestStyle = '';
+window._latestParams = '';
+
+// Build character input grid
+const charGrid = document.getElementById('charGrid');
+const charNames = ['Indra Mallo','Nilkanth S. Avhad','Vatsala Vasudeva','Shyamal Misra','Anandrao Patil','Kaling Tayeng'];
+const charStates = ['Maharashtra','Punjab','Gujarat','Haryana','Tamil Nadu','Arunachal Pradesh'];
+
+for (let i = 0; i < 6; i++) {
+  const div = document.createElement('div');
+  div.className = 'char-row';
+  div.setAttribute('data-num', i+1);
+  div.innerHTML = `
+    <div>
+      <label>Name</label>
+      <input type="text" id="cname${i}" value="${charNames[i]}" placeholder="Character name" oninput="saveToStorage()">
+    </div>
+    <div>
+      <label>Gender</label>
+      <select id="cgender${i}" onchange="saveToStorage()">
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+      </select>
+    </div>
+    <div>
+      <label>Skin Tone</label>
+      <select id="cskin${i}" onchange="saveToStorage()">
+        <option value="medium brown skin">Medium Brown</option>
+        <option value="light brown skin">Light Brown</option>
+        <option value="dark brown skin">Dark Brown</option>
+        <option value="wheatish complexion">Wheatish</option>
+        <option value="fair complexion">Fair</option>
+      </select>
+    </div>
+    <div class="full-width">
+      <label>Visual Description (hair, face, build, distinctive feature)</label>
+      <input type="text" id="cdesc${i}" placeholder="e.g. young Indian woman, short black hair, confident smile, wearing kurta" value="" oninput="saveToStorage()">
+    </div>
+    <div class="full-width">
+      <label>Signature Clothing / Accessory</label>
+      <input type="text" id="ccloth${i}" placeholder="e.g. always wears a wristwatch, blue kurta, glasses" oninput="saveToStorage()">
+    </div>
+    <div class="full-width" style="margin-top:4px;">
+      <label style="display:flex;align-items:center;gap:8px;color:#aaa;">
+        📸 Passport Photo URL
+        <span id="photoStatus${i}" style="font-size:0.65rem;padding:2px 8px;border-radius:2px;display:none;font-family:Space Mono,monospace;"></span>
+      </label>
+      <input type="text" id="cphoto${i}"
+        placeholder="https://i.imgur.com/xxxxx.jpg (Imgur only!)"
+        style="font-size:0.72rem;border-color:#333;"
+        oninput="validatePhotoUrl(${i}); saveToStorage()">
+    </div>
+  `;
+  charGrid.appendChild(div);
+}
+
+// Build sref URL input grid
+const srefGrid = document.getElementById('srefGrid');
+for (let i = 0; i < 6; i++) {
+  const div = document.createElement('div');
+  div.className = 'char-row';
+  div.setAttribute('data-num', i+1);
+  div.style.gridTemplateColumns = '1fr';
+  div.innerHTML = `
+    <div>
+      <label>${charNames[i]}</label>
+      <input type="text" id="sref-${i}" placeholder="https://cdn.midjourney.com/..."
+        style="font-size:0.72rem;" oninput="onSrefInput(${i}, this.value)">
+    </div>
+  `;
+  srefGrid.appendChild(div);
+}
+
+// --- localStorage save/load ---
+function saveToStorage() {
+  const data = {};
+  data.scriptInput = document.getElementById('scriptInput').value;
+  data.stylePreset = document.getElementById('stylePreset').value;
+  data.customStyle = document.getElementById('customStyle').value;
+  data.aspectRatio = document.getElementById('aspectRatio').value;
+  data.stylize = document.getElementById('stylize').value;
+  data.mjVersion = document.getElementById('mjVersion').value;
+  data.chars = [];
+  data.srefs = [];
+  for (let i = 0; i < 6; i++) {
+    data.chars.push({
+      name: document.getElementById(`cname${i}`).value,
+      gender: document.getElementById(`cgender${i}`).value,
+      skin: document.getElementById(`cskin${i}`).value,
+      desc: document.getElementById(`cdesc${i}`).value,
+      cloth: document.getElementById(`ccloth${i}`).value,
+      photo: document.getElementById(`cphoto${i}`).value
+    });
+    data.srefs.push(document.getElementById(`sref-${i}`).value);
+  }
+  localStorage.setItem('mjPromptGen', JSON.stringify(data));
+}
+
+function loadFromStorage() {
+  const raw = localStorage.getItem('mjPromptGen');
+  if (!raw) return;
+  try {
+    const data = JSON.parse(raw);
+    if (data.scriptInput) document.getElementById('scriptInput').value = data.scriptInput;
+    if (data.stylePreset) document.getElementById('stylePreset').value = data.stylePreset;
+    if (data.customStyle) document.getElementById('customStyle').value = data.customStyle;
+    if (data.aspectRatio) document.getElementById('aspectRatio').value = data.aspectRatio;
+    if (data.stylize) document.getElementById('stylize').value = data.stylize;
+    if (data.mjVersion) document.getElementById('mjVersion').value = data.mjVersion;
+    if (data.chars) {
+      data.chars.forEach((c, i) => {
+        if (c.name) document.getElementById(`cname${i}`).value = c.name;
+        if (c.gender) document.getElementById(`cgender${i}`).value = c.gender;
+        if (c.skin) document.getElementById(`cskin${i}`).value = c.skin;
+        if (c.desc) document.getElementById(`cdesc${i}`).value = c.desc;
+        if (c.cloth) document.getElementById(`ccloth${i}`).value = c.cloth;
+        if (c.photo) { document.getElementById(`cphoto${i}`).value = c.photo; validatePhotoUrl(i); }
+      });
+    }
+    if (data.srefs) {
+      data.srefs.forEach((url, i) => {
+        if (url) document.getElementById(`sref-${i}`).value = url;
+      });
+    }
+  } catch(e) {}
+}
+
+loadFromStorage();
+loadAutomationState();
+renderAutomationDashboard();
+
+// Also save on key inputs that don't have oninput yet
+document.getElementById('scriptInput').addEventListener('input', saveToStorage);
+document.getElementById('stylePreset').addEventListener('change', saveToStorage);
+document.getElementById('customStyle').addEventListener('input', saveToStorage);
+document.getElementById('aspectRatio').addEventListener('change', saveToStorage);
+document.getElementById('stylize').addEventListener('change', saveToStorage);
+document.getElementById('mjVersion').addEventListener('change', saveToStorage);
+
+function getCharacters() {
+  const chars = [];
+  for (let i = 0; i < 6; i++) {
+    chars.push({
+      name: document.getElementById(`cname${i}`).value.trim() || charNames[i],
+      gender: document.getElementById(`cgender${i}`).value,
+      skin: document.getElementById(`cskin${i}`).value,
+      desc: document.getElementById(`cdesc${i}`).value.trim(),
+      cloth: document.getElementById(`ccloth${i}`).value.trim(),
+      photo: document.getElementById(`cphoto${i}`).value.trim()
+    });
+  }
+  return chars;
+}
+
+function getStyleString() {
+  const preset = document.getElementById('stylePreset').value;
+  const custom = document.getElementById('customStyle').value.trim();
+  if (preset === 'custom' && custom) return custom;
+  if (custom) return STYLE_PRESETS[preset] + ', ' + custom;
+  return STYLE_PRESETS[preset];
+}
+
+function getParams() {
+  return [
+    document.getElementById('aspectRatio').value,
+    document.getElementById('stylize').value,
+    document.getElementById('mjVersion').value
+  ].join(' ');
+}
+
+function normalizeHost(urlLike) {
+  try {
+    return new URL(urlLike).hostname.toLowerCase();
+  } catch (e) {
+    return '';
+  }
+}
+
+function isApprovedPhotoUrl(urlLike) {
+  const host = normalizeHost(urlLike);
+  if (!host) return false;
+  return PHOTO_ALLOWED_HOSTS.some(allowed => host === allowed || host.endsWith('.' + allowed));
+}
+
+function isApprovedMidjourneyUrl(urlLike) {
+  const host = normalizeHost(urlLike);
+  if (!host) return false;
+  return MIDJOURNEY_ALLOWED_HOST_SNIPPETS.some(snippet => host.includes(snippet));
+}
+
+function validatePhotoUrl(i) {
+  const val = document.getElementById(`cphoto${i}`).value.trim();
+  const status = document.getElementById(`photoStatus${i}`);
+  if (!val) { status.style.display = 'none'; return; }
+  const valid = val.startsWith('http') && isApprovedPhotoUrl(val);
+  status.style.display = 'inline';
+  if (valid) {
+    status.textContent = 'Valid permanent URL';
+    status.style.background = 'rgba(34,197,94,0.15)';
+    status.style.color = '#22c55e';
+    status.style.border = '1px solid rgba(34,197,94,0.3)';
+  } else {
+    status.textContent = 'Use Imgur URL';
+    status.style.background = 'rgba(239,68,68,0.1)';
+    status.style.color = '#ef4444';
+    status.style.border = '1px solid rgba(239,68,68,0.3)';
+  }
+}
+
+function getSrefValue(i) {
+  const fromSetup = document.getElementById(`sref-${i}`);
+  const fromSheets = document.getElementById(`sref-sheet-${i}`);
+  if (fromSetup && fromSetup.value.trim()) return fromSetup.value.trim();
+  if (fromSheets && fromSheets.value.trim()) return fromSheets.value.trim();
+  return '';
+}
+
+function setSrefValue(i, val) {
+  const fromSetup = document.getElementById(`sref-${i}`);
+  const fromSheets = document.getElementById(`sref-sheet-${i}`);
+  if (fromSetup) fromSetup.value = val;
+  if (fromSheets) fromSheets.value = val;
+}
+
+function onSrefInput(i, val) {
+  setSrefValue(i, (val || '').trim());
+  saveToStorage();
+  const bar = document.getElementById('srefApplyBar');
+  if (bar) bar.style.display = 'flex';
+}
+
+function onSheetSrefInput(i, val) {
+  onSrefInput(i, val);
+}
+
+function buildCharDesc(char) {
+  const genderWord = char.gender === 'female' ? 'young Indian woman' : 'young Indian man';
+  const parts = [genderWord, char.desc, char.skin, char.cloth].filter(Boolean);
+  return parts.join(', ');
+}
+
+function buildCref(chars) {
+  // Returns --cref urls for all characters that have photos
+  const urls = chars.filter(c => c.photo).map(c => c.photo);
+  return urls.length ? ` --cref ${urls.join(' ')}` : '';
+}
+
+function buildSingleCref(char) {
+  return char.photo ? ` --cref ${char.photo} --cw 100` : '';
+}
+
+function buildPrompt(panel, chars, style, params) {
+  // Find characters mentioned in this panel
+  const mentioned = [];
+  const allDialogueChars = (panel.dialogues || []).map(d => d.character);
+  chars.forEach(c => {
+    if (allDialogueChars.some(dc => dc && c.name && dc.toLowerCase().includes(c.name.split(' ')[0].toLowerCase()))) {
+      mentioned.push(c);
+    }
+  });
+
+  // Build character descriptions for this panel
+  let charDesc = '';
+  if (mentioned.length > 0) {
+    charDesc = mentioned.map(c => `${c.name} (${buildCharDesc(c)})`).join(', ');
+  } else {
+    charDesc = 'Indian IAS officer trainees';
+  }
+
+  // Build scene
+  const scene = panel.scene || 'Mussoorie hill station, India, evening';
+  const visual = panel.visual || '';
+
+  // Dream bubble special handling
+  let dreamPart = '';
+  if (panel.dreamOf) {
+    const parts = panel.dreamOf.split('|');
+    dreamPart = ` In the corner, a soft glowing dream bubble shows: ${parts[1] || panel.dreamOf}.`;
+  }
+
+  const panelType = panel.tag || '';
+  const moodMap = {
+    OPENING: 'warm golden light, exciting, adventurous mood',
+    DREAM: 'soft dreamy lighting, nostalgic, emotional warmth',
+    BONDING: 'intimate warm glow, friendship, heartfelt',
+    FINALE: 'glowing lights, emotional, triumphant, misty Mussoorie night',
+    ADVENTURE: 'dynamic composition, lively street scene',
+    FLASHBACK: 'slightly desaturated, nostalgic filter',
+  };
+  const mood = moodMap[panelType] || 'warm storytelling mood';
+
+  // Build cref from mentioned characters who have photos
+  const crefPart = mentioned.length > 0
+    ? mentioned.filter(c => c.photo).map(c => c.photo).join(' ')
+    : chars.filter(c => c.photo).map(c => c.photo).join(' ');
+  const crefStr = crefPart ? ` --cref ${crefPart} --cw 100` : '';
+
+  const prompt = `/imagine prompt: ${style}, single comic book panel, ${scene}, featuring ${charDesc}, ${visual}${dreamPart} ${mood}, no text, no words, no letters, no speech bubbles, high detail, professional illustration ${params}${crefStr} --no text letters words captions speech bubbles watermark signature`;
+
+  return prompt.replace(/\s+/g, ' ').trim();
+}
+
+function validateScriptSchema(script) {
+  const errors = [];
+  if (!script || typeof script !== 'object') {
+    return ['Script JSON must be an object.'];
+  }
+
+  if (!script.title || typeof script.title !== 'string') errors.push('Missing required field: title');
+  if (!script.group || typeof script.group !== 'string') errors.push('Missing required field: group');
+  if (!Array.isArray(script.characters) || script.characters.length !== 6) {
+    errors.push('characters must be an array of exactly 6 entries');
+  }
+
+  if (!Array.isArray(script.panels)) {
+    errors.push('panels must be an array');
+    return errors;
+  }
+  if (script.panels.length !== 10) {
+    errors.push(`panels must contain exactly 10 entries (found ${script.panels.length})`);
+  }
+
+  const seen = new Set();
+  script.panels.forEach((p, idx) => {
+    const panelNo = Number(p && p.number);
+    if (!Number.isInteger(panelNo)) {
+      errors.push(`panel[${idx}] missing integer "number"`);
+      return;
+    }
+    if (panelNo < 1 || panelNo > 10) {
+      errors.push(`panel number out of range: ${panelNo} (expected 1-10)`);
+    }
+    if (seen.has(panelNo)) {
+      errors.push(`duplicate panel number: ${panelNo}`);
+    }
+    seen.add(panelNo);
+    if (!Array.isArray(p.dialogues)) {
+      errors.push(`panel ${panelNo} must include dialogues[]`);
+    }
+  });
+
+  return errors;
+}
+
+function getValidSrefUrlsOrThrow() {
+  const urls = [];
+  const invalidRows = [];
+  for (let i = 0; i < 6; i++) {
+    const val = getSrefValue(i);
+    if (!val) continue;
+    if (!isApprovedMidjourneyUrl(val)) {
+      invalidRows.push(i + 1);
+      continue;
+    }
+    urls.push(val);
+  }
+  if (invalidRows.length) {
+    throw new Error(`Invalid Midjourney character sheet URL(s) in 1b: ${invalidRows.join(', ')}. Use Midjourney output URLs (e.g. cdn.midjourney.com).`);
+  }
+  return urls;
+}
+
+async function generatePrompts() {
+  const btn = document.getElementById('generateBtn');
+  const loadBar = document.getElementById('loadingBar');
+  const loadTxt = document.getElementById('loadingText');
+  const errBox = document.getElementById('errorBox');
+  const output = document.getElementById('output');
+
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const scriptRaw = document.getElementById('scriptInput').value.trim();
+
+  if (!apiKey) { showError('Please enter your Anthropic API key.'); return; }
+  if (!scriptRaw) { showError('Please paste a comic script.'); return; }
+
+  btn.disabled = true;
+  loadBar.classList.add('visible');
+  loadTxt.classList.add('visible');
+  errBox.classList.remove('visible');
+  output.classList.remove('visible');
+
+  try {
+    // Extract JSON from pasted text
+    let script;
+    try {
+      const jsonMatch = scriptRaw.match(/\{[\s\S]*\}/);
+      script = JSON.parse(jsonMatch ? jsonMatch[0] : scriptRaw);
+    } catch(e) {
+      throw new Error('Could not parse script JSON. Please paste the JSON output from the Comic Script Generator.');
+    }
+
+    const schemaErrors = validateScriptSchema(script);
+    if (schemaErrors.length) {
+      throw new Error('Script schema validation failed:\n- ' + schemaErrors.join('\n- '));
+    }
+
+    const panels = script.panels || [];
+    if (!panels.length) throw new Error('No panels found in the script.');
+    getValidSrefUrlsOrThrow();
+
+    const chars = getCharacters();
+    const invalidPhotoRows = chars
+      .map((c, i) => ({ i: i + 1, photo: c.photo }))
+      .filter(x => x.photo && !isApprovedPhotoUrl(x.photo))
+      .map(x => x.i);
+    if (invalidPhotoRows.length) {
+      throw new Error(`Invalid passport photo URL(s): ${invalidPhotoRows.join(', ')}. Use permanent Imgur links.`);
+    }
+    const style = getStyleString();
+    const params = getParams();
+
+    // Use Claude to enhance the prompts
+    const charList = chars.map((c,i) =>
+      `${c.name}: ${buildCharDesc(c)}`
+    ).join('\n');
+
+    const panelSummaries = panels.map(p =>
+      `Panel ${p.number} — ${p.title} [${p.tag}]: Scene: ${p.scene}. Visual: ${p.visual}. ${p.dreamOf ? 'Dream: '+p.dreamOf : ''}`
+    ).join('\n');
+
+    const response = await fetch('http://localhost:8765/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: apiKey,
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{
+          role: 'user',
+          content: `You are an expert at writing Midjourney image generation prompts for comic books.
+
+COMIC: "${script.title}" — Group: "${script.group}"
+ART STYLE: ${style}
+MJ PARAMETERS: ${params}
+
+CHARACTERS (maintain visual consistency):
+${charList}
+
+PANELS TO ILLUSTRATE:
+${panelSummaries}
+
+Write one Midjourney prompt per panel. Each prompt should:
+- Start with "/imagine prompt: "
+- Include the art style: ${style}
+- Say "single comic book panel"
+- Describe the scene and key characters visually (use their descriptions above, including gender — say "young Indian man" or "young Indian woman" explicitly)
+- Include the mood/lighting for that panel type
+- For DREAM panels, describe the dream bubble as a glowing inset panel
+- For FINALE panel, make it emotional and grand
+- CRITICAL: End every prompt with "no text, no words, no letters, no speech bubbles" — Midjourney cannot generate readable text
+- CRITICAL: Always append this negative parameter at the very end: --no text letters words captions speech bubbles watermark signature
+- End with: ${params}${chars.some(c=>c.photo) ? ' --cref [PHOTO_URLS_HERE] --cw 100' : ''} --no text letters words captions speech bubbles watermark signature
+- Be 60-100 words long (before the parameters)
+- NOTE: Photo URLs will be automatically appended to final prompts
+
+Return ONLY a JSON array — no explanation, no markdown:
+[
+  {"panel": 1, "title": "...", "prompt": "/imagine prompt: ..."},
+  ...
+]`
+        }]
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error?.message || 'API error');
+
+    const rawText = data.content.map(b => b.text || '').join('');
+    const clean = rawText.replace(/```json|```/g, '').trim();
+    const promptsArray = JSON.parse(clean.match(/\[[\s\S]*\]/)[0]);
+
+    renderOutput(promptsArray, panels, chars, script, style, params);
+    loadBar.classList.remove('visible');
+    loadTxt.classList.remove('visible');
+    output.classList.add('visible');
+    output.scrollIntoView({ behavior: 'smooth' });
+
+  } catch(err) {
+    loadBar.classList.remove('visible');
+    loadTxt.classList.remove('visible');
+    showError(err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function getSrefUrls() {
+  const urls = [];
+  for (let i = 0; i < 6; i++) {
+    const val = getSrefValue(i);
+    if (val && val.startsWith('http') && isApprovedMidjourneyUrl(val)) urls.push(val);
+  }
+  return urls;
+}
+
+function renderOutput(prompts, panels, chars, script, style, params) {
+  window._latestPrompts = JSON.parse(JSON.stringify(prompts || []));
+  window._latestPanels = JSON.parse(JSON.stringify(panels || []));
+  window._latestScript = JSON.parse(JSON.stringify(script || {}));
+  window._latestChars = JSON.parse(JSON.stringify(chars || []));
+  window._latestStyle = style || '';
+  window._latestParams = params || '';
+
+  const photoCount = chars.filter(c => c.photo).length;
+  const srefUrls = getSrefUrls();
+  const srefCount = srefUrls.length;
+  document.getElementById('outputTitle').textContent =
+    `✦ ${(script.group || '').toUpperCase()} — ${prompts.length} PROMPTS · ${photoCount}/6 PHOTOS · ${srefCount}/6 SREF`;
+
+  // Individual panels tab
+  const list = document.getElementById('promptList');
+  list.innerHTML = '';
+  const panelMap = {};
+  panels.forEach(p => panelMap[p.number] = p);
+
+  // Append cref to all Claude-generated prompts
+  if (photoCount > 0) {
+    prompts.forEach(item => {
+      // Remove any placeholder cref and append real ones
+      item.prompt = item.prompt.replace(/\s*--cref\s*\[PHOTO_URLS_HERE\]/g, '').trim();
+      // Build per-panel cref (use chars mentioned in that panel, fallback all)
+      const panel = panelMap[item.panel] || panels[parseInt(item.panel)-1] || {};
+      const dialogueNames = (panel.dialogues||[]).map(d=>(d.character||'').split(' ')[0].toLowerCase());
+      const panelChars = chars.filter(c => {
+        const firstName = c.name.split(' ')[0].toLowerCase();
+        return dialogueNames.some(dn => dn.includes(firstName) || firstName.includes(dn));
+      }).filter(c => c.photo);
+      const crefUrls = panelChars.length ? panelChars : chars.filter(c=>c.photo);
+      if (crefUrls.length) {
+        // Remove existing --cref if any
+        item.prompt = item.prompt.replace(/\s*--cref\s+https?\S+/g, '');
+        // Strip trailing MJ params temporarily, append cref before params
+        const paramMatch = item.prompt.match(/(\s*--(ar|s|v|niji|cw|cref)\s*[\S]+)+\s*$/);
+        const paramStr = paramMatch ? paramMatch[0].trim() : '';
+        const basePrompt = paramStr ? item.prompt.slice(0, item.prompt.lastIndexOf(paramStr)).trim() : item.prompt;
+        const cleanParams = paramStr.replace(/\s*--cref\s+https?\S+/g, '');
+        item.prompt = `${basePrompt} ${cleanParams} --cref ${crefUrls.map(c=>c.photo).join(' ')} --cw 100`.replace(/\s+/g,' ').trim();
+      }
+    });
+  }
+
+  // Auto-apply --sref from character sheet URLs
+  if (srefUrls.length > 0) {
+    const srefStr = `--sref ${srefUrls.join(' ')}`;
+    prompts.forEach(item => {
+      item.prompt = item.prompt.replace(/\s*--sref\s+https?\S+(\s+https?\S+)*/g, '');
+      item.prompt = item.prompt.trim() + ' ' + srefStr;
+      item.prompt = item.prompt.replace(/\s+/g, ' ').trim();
+    });
+  }
+
+  prompts.forEach((item, idx) => {
+    const panel = panelMap[item.panel] || panels[idx] || {};
+    const card = document.createElement('div');
+    card.className = 'prompt-card';
+
+    const mentionedChars = (panel.dialogues || [])
+      .map(d => d.character)
+      .filter((v,i,a) => v && a.indexOf(v) === i);
+
+    card.innerHTML = `
+      <div class="prompt-card-header">
+        <span class="panel-num">PANEL ${item.panel}</span>
+        <span class="panel-title-text">${item.title || panel.title || ''}</span>
+        ${panel.tag ? `<span class="panel-tag-badge">${panel.tag}</span>` : ''}
+      </div>
+      <div class="prompt-card-body">
+        <div class="scene-note">📍 ${panel.scene || ''}</div>
+        <div class="prompt-text" id="prompt-${idx}">${item.prompt}</div>
+        <div class="prompt-actions">
+          <button class="btn-copy-one" onclick="copyOne(${idx}, this)">⊞ COPY</button>
+          <div class="char-tag-list">
+            ${mentionedChars.map(c => `<span class="char-tag">${c}</span>`).join('')}
+            ${panel.dreamOf ? '<span class="char-tag" style="color:var(--accent2);border-color:rgba(59,130,246,0.3)">💭 DREAM</span>' : ''}
+          </div>
+        </div>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+
+  // Bulk tab
+  document.getElementById('bulkText').textContent =
+    prompts.map((p, i) => `— PANEL ${p.panel}: ${p.title || ''} —\n${p.prompt}`).join('\n\n');
+
+  // Character sheets tab
+  const sheetsDiv = document.getElementById('charSheets');
+  sheetsDiv.innerHTML = '';
+  chars.forEach((c, i) => {
+    const selfCref = c.photo ? ` --cref ${c.photo} --cw 100` : '';
+    const charPrompt = `/imagine prompt: ${style}, character reference sheet, showing ${c.name}, ${buildCharDesc(c)}, Indian IAS officer trainee, young professional, full body front view + side view + expression sheet, white background, character design reference ${params}${selfCref} --no text letters words captions watermark signature`;
+    sheetsDiv.innerHTML += `
+      <div class="prompt-card" style="margin-bottom:14px;">
+        <div class="prompt-card-header">
+          <span class="panel-num" style="color:var(--green);">CHAR ${i+1}</span>
+          <span class="panel-title-text">${c.name} — Reference Sheet</span>
+        </div>
+        <div class="prompt-card-body">
+          <div class="scene-note">1. Copy prompt → run in Midjourney → upscale best result → paste URL below</div>
+          <div class="prompt-text" id="char-${i}">${charPrompt}</div>
+          <button class="btn-copy-one" onclick="copyChar(${i}, this)">⊞ COPY</button>
+          <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
+            <span style="font-size:0.7rem;color:#aaa;white-space:nowrap;">📎 Midjourney output URL:</span>
+            <input type="text" id="sref-sheet-${i}" value="${getSrefValue(i)}" placeholder="https://cdn.midjourney.com/..."
+              style="flex:1;background:#111;border:1px solid #444;color:#eee;padding:6px 8px;font-size:0.72rem;font-family:monospace;border-radius:2px;"
+              oninput="onSheetSrefInput(${i}, this.value)">
+          </div>
+        </div>
+      </div>`;
+  });
+
+  // Keep processed prompts (with cref/sref applied) as runner input.
+  window._latestPrompts = JSON.parse(JSON.stringify(prompts || []));
+
+  const scenePacket = buildScenePacket(prompts, panels, chars, script, style);
+  document.getElementById('scenePacketText').textContent = scenePacket;
+  renderAutomationDashboard();
+}
+
+function clearAllData() {
+  if (!confirm('This will clear ALL saved participant data, photo URLs, and settings from this browser. Continue?')) return;
+  localStorage.removeItem('mjPromptGen');
+  localStorage.removeItem(AUTO_STATE_KEY);
+  location.reload();
+}
+
+function applySrefToPrompts() {
+  let srefUrls = [];
+  try {
+    srefUrls = getValidSrefUrlsOrThrow();
+  } catch (err) {
+    alert(err.message);
+    return;
+  }
+  if (!srefUrls.length) { alert('Paste at least one Midjourney output URL first.'); return; }
+  const srefStr = `--sref ${srefUrls.join(' ')}`;
+  document.querySelectorAll('#promptList .prompt-text, #bulkText').forEach(el => {
+    let text = el.textContent;
+    text = text.replace(/\s*--sref\s+https?\S+(\s+https?\S+)*/g, '');
+    const vMatch = text.match(/(--v\s*\S+|--niji\s*\S+)\s*$/);
+    if (vMatch) {
+      text = text.slice(0, text.lastIndexOf(vMatch[0])).trim() + ' ' + srefStr + ' ' + vMatch[0];
+    } else {
+      text = text.trim() + ' ' + srefStr;
+    }
+    el.textContent = text.replace(/\s+/g, ' ').trim();
+  });
+  const status = document.getElementById('srefApplyStatus');
+  status.style.display = 'inline';
+  setTimeout(() => status.style.display = 'none', 3000);
+}
+
+function copyOne(idx, btn) {
+  const text = document.getElementById(`prompt-${idx}`).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ COPIED'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '⊞ COPY'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function copyChar(idx, btn) {
+  const text = document.getElementById(`char-${idx}`).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ COPIED'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '⊞ COPY'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function copyAll() {
+  const all = [...document.querySelectorAll('#promptList .prompt-text')]
+    .map(el => el.textContent).join('\n\n---\n\n');
+  navigator.clipboard.writeText(all).then(() => {
+    const btn = document.querySelector('.btn-copy-all');
+    btn.textContent = '✓ ALL COPIED'; btn.style.background = '#16a34a';
+    setTimeout(() => { btn.textContent = '⊞ COPY ALL PROMPTS'; btn.style.background = ''; }, 2500);
+  });
+}
+
+function copyBulk() {
+  const text = document.getElementById('bulkText').textContent;
+  navigator.clipboard.writeText(text);
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', ['individual','bulk','characters','scenepacket','automation'][i] === name);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => {
+    c.classList.toggle('active', c.id === `tab-${name}`);
+  });
+}
+
+function buildScenePacket(prompts, panels, chars, script, style) {
+  const panelMap = {};
+  panels.forEach(p => panelMap[p.number] = p);
+  const packet = {
+    group: script.group || '',
+    title: script.title || '',
+    style: style || '',
+    global_constraints: [
+      'Maintain character face consistency across all panels.',
+      'Preserve style continuity, lighting continuity, and costume continuity.',
+      'Do not render text, speech bubbles, watermarks, or signatures in images.',
+      'Export one final image per panel in 3:4 portrait ratio.'
+    ],
+    panels: prompts.map((item, idx) => {
+      const panel = panelMap[item.panel] || panels[idx] || {};
+      const required = (panel.dialogues || [])
+        .map(d => d.character)
+        .filter(Boolean)
+        .filter((v, i, arr) => arr.indexOf(v) === i);
+      const sceneIntent = [panel.scene || '', panel.visual || '', panel.dreamOf || '']
+        .filter(Boolean)
+        .join(' | ');
+      return {
+        panel_number: Number(item.panel) || (idx + 1),
+        title: item.title || panel.title || '',
+        scene_intent: sceneIntent,
+        generation_prompt: item.prompt,
+        required_characters: required,
+        filename: `panel_${String((Number(item.panel) || (idx + 1))).padStart(2, '0')}.png`
+      };
+    })
+  };
+
+  const checklist = [
+    'Checklist:',
+    '1. Generate all 10 panels in panel-number order.',
+    '2. Keep filenames exactly: panel_01.png ... panel_10.png.',
+    '3. Verify each image has no text and correct character count.',
+    '4. Re-run any panel with face/style drift before exporting final set.',
+    '5. Upload in matching order to the Comic Compositor.'
+  ].join('\n');
+
+  return [
+    'SCENE_PACKET',
+    '',
+    JSON.stringify(packet, null, 2),
+    '',
+    checklist
+  ].join('\n');
+}
+
+function copyScenePacket() {
+  const text = document.getElementById('scenePacketText').textContent || '';
+  if (!text.trim()) return;
+  navigator.clipboard.writeText(text);
+}
+
+function buildCharacterLock() {
+  const script = window._latestScript || {};
+  const chars = window._latestChars || getCharacters();
+  const srefs = [];
+  for (let i = 0; i < 6; i++) srefs.push(getSrefValue(i) || '');
+  return {
+    group: script.group || '',
+    title: script.title || '',
+    style_profile: {
+      style: window._latestStyle || getStyleString(),
+      params: window._latestParams || getParams(),
+      model_tier: (document.getElementById('autoModelTier') || {}).value || 'balanced'
+    },
+    characters: chars.map((c, i) => ({
+      slot: i + 1,
+      name: c.name,
+      immutable_traits: {
+        gender: c.gender,
+        skin: c.skin,
+        description: c.desc,
+        clothing: c.cloth
+      },
+      photo_ref: c.photo || '',
+      sheet_ref: srefs[i] || ''
+    })),
+    generated_at: new Date().toISOString()
+  };
+}
+
+function summarizeAutomation() {
+  const jobs = automationState.jobs || [];
+  const count = (status) => jobs.filter(j => j.status === status).length;
+  return `Jobs: ${jobs.length} · queued ${count(AUTO_STATUS.QUEUED)} · generating ${count(AUTO_STATUS.GENERATING)} · review ${count(AUTO_STATUS.REVIEW)} · approved ${count(AUTO_STATUS.APPROVED)} · fallback ${count(AUTO_STATUS.FALLBACK_MJ)} · failed ${count(AUTO_STATUS.FAILED)}${automationState.running ? ' · RUNNING' : ''}${automationState.paused ? ' · PAUSED' : ''}`;
+}
+
+function saveAutomationState() {
+  try {
+    const minimalJobs = (automationState.jobs || []).map(j => ({
+      panel_number: j.panel_number,
+      title: j.title,
+      prompt: j.prompt,
+      required_characters: j.required_characters,
+      filename: j.filename,
+      status: j.status,
+      attempts: j.attempts,
+      best_candidate_index: j.best_candidate_index,
+      approved_asset: j.approved_asset ? {
+        attempt: j.approved_asset.attempt,
+        score: j.approved_asset.score,
+        image_data_url: j.approved_asset.image_data_url || ''
+      } : null,
+      candidates: (j.candidates || []).map(c => ({
+        attempt: c.attempt,
+        score: c.score || null,
+        pass: !!c.pass,
+        error: c.error || null
+      }))
+    }));
+    const state = {
+      jobs: minimalJobs,
+      character_lock: automationState.character_lock,
+      maxCandidates: automationState.maxCandidates,
+      windowSize: automationState.windowSize
+    };
+    localStorage.setItem(AUTO_STATE_KEY, JSON.stringify(state));
+  } catch (e) {}
+}
+
+function loadAutomationState() {
+  try {
+    const raw = localStorage.getItem(AUTO_STATE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    automationState.jobs = parsed.jobs || [];
+    automationState.character_lock = parsed.character_lock || null;
+    automationState.maxCandidates = parsed.maxCandidates || 3;
+    automationState.windowSize = parsed.windowSize || 2;
+  } catch (e) {}
+}
+
+function renderAutomationDashboard() {
+  const summary = document.getElementById('autoSummary');
+  if (summary) summary.textContent = summarizeAutomation();
+
+  const jobsList = document.getElementById('automationJobsList');
+  if (jobsList) {
+    const jobs = automationState.jobs || [];
+    if (!jobs.length) {
+      jobsList.innerHTML = '<div class="scene-note">No jobs available.</div>';
+    } else {
+      jobsList.innerHTML = jobs.map(job => {
+        const best = job.best_candidate_index != null ? job.candidates[job.best_candidate_index] : null;
+        const scoreText = best && best.score ? `consistency ${Number(best.score.consistency_score || 0).toFixed(2)} · style ${Number(best.score.style_score || 0).toFixed(2)}` : 'no score';
+        return `<div class="auto-row">
+          <div>
+            <div style="font-size:0.78rem;color:#ddd;">P${String(job.panel_number).padStart(2,'0')} · ${job.title || ''}</div>
+            <div class="scene-note">attempts ${job.attempts || 0}/3 · ${scoreText}</div>
+          </div>
+          <span class="auto-status ${job.status}">${job.status}</span>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  const reviewList = document.getElementById('automationReviewList');
+  if (reviewList) {
+    const reviewJobs = (automationState.jobs || []).filter(j => j.status === AUTO_STATUS.REVIEW);
+    if (!reviewJobs.length) {
+      reviewList.innerHTML = '<div class="scene-note">No pending review items.</div>';
+    } else {
+      reviewList.innerHTML = reviewJobs.map(job => {
+        const best = job.best_candidate_index != null ? job.candidates[job.best_candidate_index] : null;
+        const img = best && best.image_data_url ? `<img class="auto-preview" src="${best.image_data_url}" alt="Panel ${job.panel_number}">` : '';
+        const meta = best && best.score ? `consistency ${Number(best.score.consistency_score || 0).toFixed(2)} · style ${Number(best.score.style_score || 0).toFixed(2)} · text_artifact ${best.score.text_artifact_flag ? 'yes' : 'no'}` : 'No score metadata';
+        return `<div class="auto-row">
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            ${img}
+            <div>
+              <div style="font-size:0.8rem;color:#ddd;">Panel ${job.panel_number} — ${job.title || ''}</div>
+              <div class="scene-note">${meta}</div>
+              <div class="btn-row" style="margin-top:6px;">
+                <button class="btn btn-primary" onclick="approveAutomationJob(${job.panel_number})">Approve</button>
+                <button class="btn btn-secondary" onclick="rejectAutomationJob(${job.panel_number})">Reject & Retry</button>
+              </div>
+            </div>
+          </div>
+          <span class="auto-status review">review</span>
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
+function normalizePromptForOpenAI(prompt, characterLock) {
+  const base = (prompt || '').replace(/^\/imagine prompt:\s*/i, '').split(' --')[0].trim();
+  const lockText = (characterLock.characters || []).map(c =>
+    `${c.name}: ${c.immutable_traits.gender}, ${c.immutable_traits.skin}, ${c.immutable_traits.description}, ${c.immutable_traits.clothing}`
+  ).join('; ');
+  return `${base}
+
+Character consistency lock (do not alter identity):
+${lockText}
+
+Constraints:
+- single comic panel, portrait 3:4
+- no text, no letters, no speech bubbles, no watermark
+- maintain style continuity with previous approved panels`;
+}
+
+function getModelTierConfig() {
+  const tier = (document.getElementById('autoModelTier') || {}).value || 'balanced';
+  if (tier === 'high') return { quality: 'high', size: '1024x1536', tier };
+  if (tier === 'economy') return { quality: 'low', size: '1024x1536', tier };
+  return { quality: 'medium', size: '1024x1536', tier };
+}
+
+async function callOpenAIGenerateImage(openaiKey, prompt) {
+  const cfg = getModelTierConfig();
+  const res = await fetch('http://localhost:8765/api/openai/generate-image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      api_key: openaiKey,
+      model: 'gpt-image-1',
+      prompt,
+      quality: cfg.quality,
+      size: cfg.size
+    })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || data.error || 'OpenAI image generation failed');
+  const first = (data.data || [])[0] || {};
+  const b64 = first.b64_json;
+  if (!b64) throw new Error('OpenAI image generation returned no image data');
+  return b64;
+}
+
+async function callOpenAIScoreImage(openaiKey, imageB64, panelPrompt, requiredCharacters) {
+  const scoreModel = (document.getElementById('autoScoreModel') || {}).value || 'gpt-4.1-mini';
+  const res = await fetch('http://localhost:8765/api/openai/score-image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      api_key: openaiKey,
+      model: scoreModel,
+      image_b64: imageB64,
+      panel_prompt: panelPrompt,
+      required_characters: requiredCharacters || [],
+      character_lock: automationState.character_lock || {}
+    })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || data.error || 'OpenAI scoring failed');
+  return data.score || {};
+}
+
+function findJob(panelNumber) {
+  return (automationState.jobs || []).find(j => Number(j.panel_number) === Number(panelNumber));
+}
+
+function chooseBestCandidateIndex(candidates) {
+  let best = -1;
+  let bestScore = -999;
+  candidates.forEach((c, idx) => {
+    if (!c || !c.score) return;
+    const s = (Number(c.score.consistency_score || 0) * 0.6) + (Number(c.score.style_score || 0) * 0.4) - (c.score.text_artifact_flag ? 1 : 0);
+    if (s > bestScore) {
+      bestScore = s;
+      best = idx;
+    }
+  });
+  return best;
+}
+
+async function generateAndScoreCandidate(job, openaiKey) {
+  const openaiPrompt = normalizePromptForOpenAI(job.prompt, automationState.character_lock || {});
+  const imageB64 = await callOpenAIGenerateImage(openaiKey, openaiPrompt);
+  const score = await callOpenAIScoreImage(openaiKey, imageB64, job.prompt, job.required_characters || []);
+  const pass = !!score.pass;
+  return {
+    attempt: job.attempts,
+    openai_prompt: openaiPrompt,
+    image_b64: imageB64,
+    image_data_url: `data:image/png;base64,${imageB64}`,
+    score,
+    pass,
+    error: null,
+    created_at: new Date().toISOString()
+  };
+}
+
+async function runAutomationJob(job, openaiKey) {
+  job.status = AUTO_STATUS.GENERATING;
+  saveAutomationState();
+  renderAutomationDashboard();
+
+  let hasGeneratedCandidate = false;
+  while ((job.attempts || 0) < automationState.maxCandidates) {
+    job.attempts += 1;
+    try {
+      const candidate = await generateAndScoreCandidate(job, openaiKey);
+      job.candidates.push(candidate);
+      hasGeneratedCandidate = true;
+      job.best_candidate_index = chooseBestCandidateIndex(job.candidates);
+      if (candidate.pass) {
+        job.status = AUTO_STATUS.REVIEW;
+        saveAutomationState();
+        renderAutomationDashboard();
+        return;
+      }
+    } catch (err) {
+      job.candidates.push({
+        attempt: job.attempts,
+        pass: false,
+        error: String(err.message || err),
+        created_at: new Date().toISOString()
+      });
+      job.best_candidate_index = chooseBestCandidateIndex(job.candidates);
+    }
+    saveAutomationState();
+    renderAutomationDashboard();
+  }
+
+  if (hasGeneratedCandidate) {
+    job.status = AUTO_STATUS.FALLBACK_MJ;
+  } else {
+    job.status = AUTO_STATUS.FAILED;
+  }
+  saveAutomationState();
+  renderAutomationDashboard();
+}
+
+function getNextQueuedJob() {
+  return (automationState.jobs || []).find(j => j.status === AUTO_STATUS.QUEUED);
+}
+
+async function pumpAutomationQueue() {
+  if (!automationState.running || automationState.paused) return;
+  const openaiKey = (document.getElementById('openaiApiKey') || {}).value?.trim();
+  if (!openaiKey) {
+    automationState.running = false;
+    showError('Automation needs an OpenAI API key.');
+    renderAutomationDashboard();
+    return;
+  }
+
+  while (automationState.running && !automationState.paused && automationState.activeCount < automationState.windowSize) {
+    const nextJob = getNextQueuedJob();
+    if (!nextJob) break;
+    automationState.activeCount += 1;
+    runAutomationJob(nextJob, openaiKey)
+      .catch((err) => {
+        nextJob.status = AUTO_STATUS.FAILED;
+        nextJob.last_error = String(err.message || err);
+      })
+      .finally(() => {
+        automationState.activeCount = Math.max(0, automationState.activeCount - 1);
+        saveAutomationState();
+        renderAutomationDashboard();
+        const stillQueued = !!getNextQueuedJob();
+        if (automationState.running && !automationState.paused && (stillQueued || automationState.activeCount > 0)) {
+          pumpAutomationQueue();
+        } else if (automationState.activeCount === 0) {
+          automationState.running = false;
+          renderAutomationDashboard();
+        }
+      });
+  }
+}
+
+function prepareAutomationJobs() {
+  if (!window._latestScript || !window._latestPrompts || !window._latestPrompts.length) {
+    showError('Generate prompts first, then prepare automation jobs.');
+    return;
+  }
+
+  const panelMap = {};
+  (window._latestPanels || []).forEach(p => panelMap[p.number] = p);
+
+  automationState.character_lock = buildCharacterLock();
+  automationState.jobs = (window._latestPrompts || []).map((item, idx) => {
+    const panel = panelMap[item.panel] || window._latestPanels[idx] || {};
+    const required = (panel.dialogues || [])
+      .map(d => d.character)
+      .filter(Boolean)
+      .filter((v, i, arr) => arr.indexOf(v) === i);
+    const panelNo = Number(item.panel) || (idx + 1);
+    return {
+      panel_number: panelNo,
+      title: item.title || panel.title || '',
+      prompt: item.prompt,
+      required_characters: required,
+      filename: `panel_${String(panelNo).padStart(2, '0')}.png`,
+      status: AUTO_STATUS.QUEUED,
+      attempts: 0,
+      candidates: [],
+      best_candidate_index: null,
+      approved_asset: null,
+      last_error: ''
+    };
+  });
+  automationState.running = false;
+  automationState.paused = false;
+  automationState.activeCount = 0;
+  saveAutomationState();
+  renderAutomationDashboard();
+  switchTab('automation');
+}
+
+function startAutomationRun() {
+  if (!automationState.jobs.length) {
+    showError('Prepare automation jobs first.');
+    return;
+  }
+  const key = (document.getElementById('openaiApiKey') || {}).value?.trim();
+  if (!key) {
+    showError('Enter OpenAI API key in Automation tab.');
+    switchTab('automation');
+    return;
+  }
+  automationState.running = true;
+  automationState.paused = false;
+  renderAutomationDashboard();
+  pumpAutomationQueue();
+}
+
+function pauseAutomationRun() {
+  automationState.paused = true;
+  automationState.running = false;
+  renderAutomationDashboard();
+}
+
+function approveAutomationJob(panelNumber) {
+  const job = findJob(panelNumber);
+  if (!job || job.status !== AUTO_STATUS.REVIEW) return;
+  const best = job.best_candidate_index != null ? job.candidates[job.best_candidate_index] : null;
+  if (!best || !best.image_data_url) {
+    showError(`Panel ${panelNumber}: no candidate image to approve.`);
+    return;
+  }
+  job.approved_asset = {
+    attempt: best.attempt,
+    score: best.score || {},
+    image_data_url: best.image_data_url,
+    image_b64: best.image_b64 || ''
+  };
+  job.status = AUTO_STATUS.APPROVED;
+  saveAutomationState();
+  renderAutomationDashboard();
+}
+
+function rejectAutomationJob(panelNumber) {
+  const job = findJob(panelNumber);
+  if (!job || job.status !== AUTO_STATUS.REVIEW) return;
+  if ((job.attempts || 0) < automationState.maxCandidates) {
+    job.status = AUTO_STATUS.QUEUED;
+  } else {
+    job.status = AUTO_STATUS.FALLBACK_MJ;
+  }
+  saveAutomationState();
+  renderAutomationDashboard();
+  if (automationState.running && !automationState.paused) {
+    pumpAutomationQueue();
+  }
+}
+
+function downloadTextFile(filename, text, mimeType) {
+  const blob = new Blob([text], { type: mimeType || 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadJsonFile(filename, obj) {
+  downloadTextFile(filename, JSON.stringify(obj, null, 2), 'application/json');
+}
+
+function downloadDataUrl(filename, dataUrl) {
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = filename;
+  a.click();
+}
+
+function buildFallbackMjPacket() {
+  const fallbackJobs = (automationState.jobs || []).filter(j => j.status === AUTO_STATUS.FALLBACK_MJ);
+  return {
+    group: (window._latestScript || {}).group || '',
+    title: (window._latestScript || {}).title || '',
+    generated_at: new Date().toISOString(),
+    panels: fallbackJobs.map(j => ({
+      panel_number: j.panel_number,
+      title: j.title,
+      prompt: j.prompt,
+      required_characters: j.required_characters,
+      filename: j.filename
+    }))
+  };
+}
+
+function exportAutomationBundle() {
+  if (!automationState.jobs.length) {
+    showError('No automation jobs to export.');
+    return;
+  }
+
+  const jobsPayload = {
+    group: (window._latestScript || {}).group || '',
+    title: (window._latestScript || {}).title || '',
+    generated_at: new Date().toISOString(),
+    jobs: automationState.jobs
+  };
+  downloadJsonFile('scene_jobs.json', jobsPayload);
+  downloadJsonFile('character_lock.json', automationState.character_lock || {});
+  downloadJsonFile('fallback_mj.json', buildFallbackMjPacket());
+
+  const unapproved = (automationState.jobs || []).filter(j => j.status !== AUTO_STATUS.APPROVED);
+  if (unapproved.length) {
+    alert(`Exported JSON bundle. ${unapproved.length} panel(s) are not approved yet, so final panel PNG export is blocked.`);
+    return;
+  }
+
+  (automationState.jobs || [])
+    .sort((a, b) => Number(a.panel_number) - Number(b.panel_number))
+    .forEach(job => {
+      if (job.approved_asset && job.approved_asset.image_data_url) {
+        downloadDataUrl(job.filename, job.approved_asset.image_data_url);
+      }
+    });
+}
+
+function downloadJobsState() {
+  const payload = {
+    jobs: automationState.jobs || [],
+    character_lock: automationState.character_lock || {},
+    generated_at: new Date().toISOString()
+  };
+  downloadJsonFile('scene_jobs.json', payload);
+}
+
+function loadJobsStateFile(event) {
+  const file = (event.target.files || [])[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      const jobs = Array.isArray(parsed) ? parsed : (parsed.jobs || []);
+      if (!Array.isArray(jobs)) throw new Error('Invalid scene_jobs file.');
+      automationState.jobs = jobs;
+      automationState.character_lock = parsed.character_lock || automationState.character_lock || buildCharacterLock();
+      automationState.running = false;
+      automationState.paused = false;
+      automationState.activeCount = 0;
+      saveAutomationState();
+      renderAutomationDashboard();
+      switchTab('automation');
+    } catch (err) {
+      showError('Could not load scene_jobs.json: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function showError(msg) {
+  const box = document.getElementById('errorBox');
+  box.textContent = '⚠ ' + msg;
+  box.classList.add('visible');
+}
+
+function loadSample() {
+  document.getElementById('scriptInput').value = `{"title":"The Last Night Before Posting","group":"The Cool Squad","tagline":"Six States, One Squad, Infinite Memories","panels":[{"number":1,"title":"The Great Escape Plan","tag":"OPENING","scene":"LBSNAA Hostel Corridor, Evening Twilight","visual":"Six officers tiptoeing through the hostel corridor, Indra confidently leading the group while making shushing gestures. Warm golden light filters through windows as Mussoorie fog begins to roll in outside.","dialogues":[{"character":"Indra","line":"Come on everyone! Who would have thought the quiet girl from day one would be planning the great momo escape?"},{"character":"Shyamal","line":"Indra, we need to be back by 10 PM sharp! You know how strict the warden gets."},{"character":"Anandrao","line":"Relax Shyamal! For once, let's be fashionably late together!"}],"caption":"","dreamOf":""},{"number":10,"title":"The Cool Squad Forever","tag":"FINALE","scene":"Same stall, all six raising chai glasses","visual":"All six officers standing together, raising their chai glasses in a toast against the backdrop of twinkling Mussoorie lights. Tears glisten in their eyes as they share this final moment, the mist around them making the scene ethereal and emotional.","dialogues":[{"character":"Indra","line":"To The Cool Squad - who taught this introvert that the best leaders are made together."},{"character":"Vatsala","line":"To six states, six dreams, but one unbreakable bond."},{"character":"ALL","line":"To serving India… together, apart, but always connected!"}],"caption":"Some friendships transcend postings. Some bonds survive any distance. And some nights... some nights last forever in the heart.","dreamOf":""}]}`;
+}
+</script>
+</body>
+</html>
+

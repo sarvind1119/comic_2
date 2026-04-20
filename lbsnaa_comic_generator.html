@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Last Night Before Posting — Comic Script Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:ital,wght@0,400;0,700;1,400&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1008;
+    --paper: #fdf6e3;
+    --panel-bg: #fff9f0;
+    --accent: #e8372a;
+    --accent2: #2563eb;
+    --gold: #f59e0b;
+    --halftone: #f0e8d0;
+    --border: 3px solid var(--ink);
+    --shadow: 4px 4px 0 var(--ink);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--paper);
+    background-image:
+      radial-gradient(circle, #d4c9a8 1px, transparent 1px);
+    background-size: 20px 20px;
+    font-family: 'Comic Neue', cursive;
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--ink);
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header-inner {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 32px 24px 28px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .badge {
+    display: inline-block;
+    background: var(--accent);
+    color: white;
+    font-family: 'Bangers', cursive;
+    font-size: 12px;
+    letter-spacing: 3px;
+    padding: 4px 12px;
+    border-radius: 2px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-family: 'Bangers', cursive;
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    color: var(--paper);
+    line-height: 1;
+    letter-spacing: 2px;
+    text-shadow: 4px 4px 0 var(--accent);
+  }
+
+  h1 span { color: var(--gold); }
+
+  .subtitle {
+    color: #b0a898;
+    font-family: 'Kalam', cursive;
+    font-size: 1rem;
+    margin-top: 8px;
+  }
+
+  .stars {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    background-image:
+      radial-gradient(circle at 80% 30%, rgba(245,158,11,0.15) 0%, transparent 50%),
+      radial-gradient(circle at 20% 70%, rgba(232,55,42,0.1) 0%, transparent 40%);
+  }
+
+  /* MAIN */
+  main {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 32px 20px 60px;
+  }
+
+  /* SECTION LABEL */
+  .section-label {
+    font-family: 'Bangers', cursive;
+    font-size: 1.1rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent2);
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 6px;
+    margin-bottom: 20px;
+    margin-top: 36px;
+  }
+
+  /* GROUP NAME */
+  .group-name-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 28px;
+  }
+
+  .group-name-row input {
+    flex: 1;
+    font-family: 'Bangers', cursive;
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+    border: var(--border);
+    background: white;
+    padding: 10px 16px;
+    box-shadow: var(--shadow);
+    outline: none;
+    color: var(--ink);
+  }
+
+  .group-name-row input:focus {
+    background: #fffde7;
+  }
+
+  /* CHARACTER CARDS */
+  .characters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px;
+  }
+
+  .char-card {
+    border: var(--border);
+    background: var(--panel-bg);
+    box-shadow: var(--shadow);
+    padding: 18px 16px;
+    position: relative;
+    transition: transform 0.15s;
+  }
+
+  .char-card:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--ink); }
+
+  .char-number {
+    position: absolute;
+    top: -14px; left: 12px;
+    background: var(--accent);
+    color: white;
+    font-family: 'Bangers', cursive;
+    font-size: 1.1rem;
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--ink);
+    border-radius: 50%;
+  }
+
+  .char-card label {
+    display: block;
+    font-family: 'Kalam', cursive;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 4px;
+    margin-top: 14px;
+  }
+
+  .char-card label:first-of-type { margin-top: 8px; }
+
+  .char-card input, .char-card select, .char-card textarea {
+    width: 100%;
+    border: 2px solid var(--ink);
+    background: white;
+    font-family: 'Comic Neue', cursive;
+    font-size: 0.92rem;
+    padding: 7px 10px;
+    outline: none;
+    color: var(--ink);
+  }
+
+  .char-card input:focus, .char-card textarea:focus {
+    background: #fffde7;
+    border-color: var(--accent2);
+  }
+
+  .char-card textarea {
+    resize: vertical;
+    min-height: 64px;
+  }
+
+  /* GENERATE BUTTON */
+  .generate-wrap {
+    text-align: center;
+    margin: 40px 0 0;
+  }
+
+  .btn-generate {
+    font-family: 'Bangers', cursive;
+    font-size: 1.8rem;
+    letter-spacing: 3px;
+    background: var(--accent);
+    color: white;
+    border: var(--border);
+    padding: 16px 48px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    text-transform: uppercase;
+    transition: transform 0.1s, box-shadow 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-generate:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--ink);
+  }
+
+  .btn-generate:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+
+  .btn-generate:disabled {
+    background: #aaa;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: var(--shadow);
+  }
+
+  /* LOADING */
+  .loading-panel {
+    display: none;
+    border: var(--border);
+    background: var(--panel-bg);
+    box-shadow: var(--shadow);
+    padding: 40px 24px;
+    text-align: center;
+    margin-top: 40px;
+  }
+
+  .loading-panel.visible { display: block; }
+
+  .loading-dots {
+    font-family: 'Bangers', cursive;
+    font-size: 2rem;
+    letter-spacing: 4px;
+    color: var(--accent2);
+    animation: pulse 1s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .loading-msg {
+    font-family: 'Kalam', cursive;
+    color: #888;
+    margin-top: 10px;
+  }
+
+  /* OUTPUT */
+  #output {
+    display: none;
+    margin-top: 40px;
+  }
+
+  #output.visible { display: block; }
+
+  .output-header {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'Bangers', cursive;
+    font-size: 1.6rem;
+    letter-spacing: 3px;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .btn-copy, .btn-print {
+    font-family: 'Bangers', cursive;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    border: 2px solid var(--paper);
+    padding: 8px 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-copy { background: var(--gold); color: var(--ink); }
+  .btn-print { background: var(--accent2); color: white; }
+  .btn-json { background: #16a34a; color: white; }
+
+  .btn-copy:hover { background: #fbbf24; }
+  .btn-print:hover { background: #1d4ed8; }
+  .btn-json:hover { background: #15803d; }
+
+  .script-body {
+    border: var(--border);
+    border-top: none;
+    background: white;
+    padding: 32px 28px;
+    box-shadow: var(--shadow);
+  }
+
+  .script-body h2 {
+    font-family: 'Bangers', cursive;
+    font-size: 1.6rem;
+    letter-spacing: 2px;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .script-body .story-intro {
+    font-family: 'Kalam', cursive;
+    font-style: italic;
+    color: #555;
+    border-left: 4px solid var(--gold);
+    padding-left: 14px;
+    margin: 16px 0 28px;
+    font-size: 1.02rem;
+  }
+
+  .panel-block {
+    border: 2px solid var(--ink);
+    background: var(--panel-bg);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    background: var(--ink);
+    color: white;
+    font-family: 'Bangers', cursive;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .panel-tag {
+    background: var(--accent);
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    letter-spacing: 1px;
+    border-radius: 2px;
+  }
+
+  .panel-content {
+    padding: 16px;
+  }
+
+  .panel-content .scene {
+    font-family: 'Kalam', cursive;
+    font-size: 0.88rem;
+    color: var(--accent2);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+
+  .panel-content .visual {
+    font-size: 0.95rem;
+    color: #333;
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
+  .dialogue-line {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+    align-items: flex-start;
+  }
+
+  .char-name-tag {
+    font-family: 'Bangers', cursive;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    background: var(--ink);
+    color: white;
+    padding: 2px 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    border-radius: 2px;
+    margin-top: 1px;
+  }
+
+  .char-name-tag.accent { background: var(--accent); }
+  .char-name-tag.blue { background: var(--accent2); }
+  .char-name-tag.gold { background: var(--gold); color: var(--ink); }
+  .char-name-tag.green { background: #16a34a; }
+  .char-name-tag.purple { background: #7c3aed; }
+  .char-name-tag.teal { background: #0d9488; }
+
+  .speech-text {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--ink);
+    background: white;
+    border: 1.5px solid #ddd;
+    padding: 6px 12px;
+    border-radius: 0 8px 8px 8px;
+    flex: 1;
+  }
+
+  .caption-box {
+    background: var(--gold);
+    color: var(--ink);
+    font-family: 'Kalam', cursive;
+    font-style: italic;
+    font-size: 0.9rem;
+    padding: 8px 14px;
+    margin-top: 10px;
+    border: 2px solid var(--ink);
+    display: inline-block;
+    max-width: 100%;
+  }
+
+  .dream-panel {
+    background: linear-gradient(135deg, #e0f2fe, #fce7f3);
+    border: 2px dashed var(--ink);
+    padding: 10px 14px;
+    margin-top: 10px;
+    font-family: 'Kalam', cursive;
+    font-style: italic;
+    font-size: 0.88rem;
+    color: #444;
+  }
+
+  .dream-panel strong {
+    color: var(--accent2);
+    font-style: normal;
+    font-weight: 700;
+  }
+
+  .characters-intro-block {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .char-intro-card {
+    border: 2px solid var(--ink);
+    background: white;
+    padding: 12px;
+  }
+
+  .char-intro-card .cname {
+    font-family: 'Bangers', cursive;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    color: var(--accent);
+  }
+
+  .char-intro-card .cdetail {
+    font-size: 0.82rem;
+    color: #555;
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+
+  /* PRINT */
+  @media print {
+    body { background: white; }
+    header, .section-label, .characters-grid, .generate-wrap, .loading-panel, .output-header { display: none !important; }
+    #output { display: block !important; margin: 0; }
+    .script-body { border: none; box-shadow: none; padding: 0; }
+    .panel-block { break-inside: avoid; }
+  }
+
+  /* ERROR */
+  .error-box {
+    display: none;
+    border: 3px solid var(--accent);
+    background: #fff5f5;
+    padding: 16px 20px;
+    margin-top: 20px;
+    font-family: 'Kalam', cursive;
+    box-shadow: var(--shadow);
+  }
+  .error-box.visible { display: block; }
+  .error-box strong { color: var(--accent); font-family: 'Bangers', cursive; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="stars"></div>
+  <div class="header-inner">
+    <div class="badge">✦ LBSNAA · Phase 5 · Batch Memory</div>
+    <h1>The Last Night <span>Before Posting</span></h1>
+    <p class="subtitle">Enter 6 officer trainees → get a personalized comic script ✦ 10 panels ✦ Ready for illustration</p>
+  </div>
+</header>
+
+<main>
+
+  <div class="section-label">✦ Step 0 — Anthropic API Key</div>
+  <div style="border:var(--border);background:white;box-shadow:var(--shadow);padding:16px 20px;margin-bottom:8px;">
+    <div style="font-family:'Kalam',cursive;font-size:0.85rem;color:#666;margin-bottom:10px;">
+      🔑 Your key is used locally and never stored. Get one at <strong>console.anthropic.com</strong>
+    </div>
+    <input type="password" id="apiKey" placeholder="sk-ant-api03-..." style="width:100%;border:2px solid var(--ink);font-family:'Comic Neue',cursive;font-size:0.95rem;padding:10px 14px;outline:none;background:#fffde7;">
+  </div>
+
+  <div class="section-label">✦ Step 1 — Group Name</div>
+  <div class="group-name-row">
+    <input type="text" id="groupName" placeholder="e.g. Group Alpha / The Dehradun Six / Squad 3" maxlength="60">
+  </div>
+
+  <div class="section-label">✦ Step 1b — Story Mode</div>
+  <div class="group-name-row">
+    <select id="storyMode" style="flex:1;font-family:'Comic Neue',cursive;font-size:1rem;padding:10px 14px;border:2px solid var(--ink);outline:none;background:#fffde7;cursor:pointer;">
+      <option value="curated">Curated Template (Recommended)</option>
+      <option value="custom">Custom Idea (Guided + Free Text)</option>
+    </select>
+  </div>
+
+  <div id="templateSection">
+    <div class="section-label">✦ Step 1c — Story Template</div>
+    <div class="group-name-row">
+      <select id="storyTemplate" style="flex:1;font-family:'Comic Neue',cursive;font-size:1rem;padding:10px 14px;border:2px solid var(--ink);outline:none;background:#fffde7;cursor:pointer;">
+        <option value="last_night">The Last Night Before Posting (sneaking out for chai & momos)</option>
+        <option value="case_study">The Great Case Study That Came Alive (case study turns into adventure)</option>
+        <option value="mess_mystery">The Mess Menu Mystery (investigating the legendary mess food)</option>
+        <option value="reunion">Ten Years Later: Reunion at Char Dukan (future reunion imagined)</option>
+        <option value="disaster_drill">The Night of the Disaster Drill (high-pressure response simulation)</option>
+        <option value="district_day">One Day, Six Districts (future district life imagined in parallel)</option>
+        <option value="treasure_hunt">The Farewell Treasure Hunt (memory clues across the Academy)</option>
+        <option value="ethics_dilemma">The Ethics Desk at Midnight (tough dilemma, hopeful resolution)</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="customIdeaSection" style="display:none;">
+    <div class="section-label">✦ Step 1d — Custom Idea (Guided)</div>
+    <div style="border:var(--border);background:white;box-shadow:var(--shadow);padding:16px 20px;margin-bottom:8px;">
+      <label style="display:block;font-family:'Bangers',cursive;letter-spacing:1px;margin-bottom:6px;">Premise</label>
+      <input type="text" id="ideaPremise" maxlength="140" placeholder="e.g. Final-night mock crisis turns into a life lesson on teamwork" style="width:100%;border:2px solid var(--ink);font-family:'Comic Neue',cursive;font-size:0.95rem;padding:10px 14px;outline:none;background:#fffde7;margin-bottom:12px;">
+      <label style="display:block;font-family:'Bangers',cursive;letter-spacing:1px;margin-bottom:6px;">Conflict</label>
+      <input type="text" id="ideaConflict" maxlength="180" placeholder="e.g. They have only one hour to solve a district-level emergency simulation together" style="width:100%;border:2px solid var(--ink);font-family:'Comic Neue',cursive;font-size:0.95rem;padding:10px 14px;outline:none;background:#fffde7;margin-bottom:12px;">
+      <label style="display:block;font-family:'Bangers',cursive;letter-spacing:1px;margin-bottom:6px;">Mood</label>
+      <input type="text" id="ideaMood" maxlength="100" placeholder="e.g. warm, witty, respectful, hopeful" style="width:100%;border:2px solid var(--ink);font-family:'Comic Neue',cursive;font-size:0.95rem;padding:10px 14px;outline:none;background:#fffde7;margin-bottom:12px;">
+      <label style="display:block;font-family:'Bangers',cursive;letter-spacing:1px;margin-bottom:6px;">Key Location</label>
+      <input type="text" id="ideaLocation" maxlength="100" placeholder="e.g. Char Dukan + Academy war room + misty Mussoorie roads" style="width:100%;border:2px solid var(--ink);font-family:'Comic Neue',cursive;font-size:0.95rem;padding:10px 14px;outline:none;background:#fffde7;margin-bottom:12px;">
+      <label style="display:block;font-family:'Bangers',cursive;letter-spacing:1px;margin-bottom:6px;">Ending Note</label>
+      <input type="text" id="ideaEnding" maxlength="140" placeholder="e.g. Ends in a dignified toast to service and friendship" style="width:100%;border:2px solid var(--ink);font-family:'Comic Neue',cursive;font-size:0.95rem;padding:10px 14px;outline:none;background:#fffde7;">
+    </div>
+
+    <div class="section-label">✦ Step 1e — Custom Idea (Optional Free Text)</div>
+    <div style="border:var(--border);background:white;box-shadow:var(--shadow);padding:16px 20px;margin-bottom:8px;">
+      <textarea id="ideaFreeText" rows="4" placeholder="Optional: Write your raw story seed in plain language. The tool will refine it into a dignified 10-panel comic suitable for senior civil servants." style="width:100%;border:2px solid var(--ink);font-family:'Comic Neue',cursive;font-size:0.95rem;padding:10px 14px;outline:none;background:#fffde7;resize:vertical;"></textarea>
+    </div>
+  </div>
+
+  <div class="section-label">✦ Step 2 — Enter the Six Characters</div>
+  <div class="characters-grid" id="charGrid"></div>
+
+  <div class="section-label">✦ Step 3 — Generate</div>
+  <div class="generate-wrap">
+    <button class="btn-generate" id="generateBtn" onclick="generateScript()">
+      ✦ Generate Comic Script ✦
+    </button>
+  </div>
+
+  <div class="error-box" id="errorBox">
+    <strong>OOPS! </strong> <span id="errorMsg">Something went wrong. Please try again.</span>
+  </div>
+
+  <div class="loading-panel" id="loadingPanel">
+    <div class="loading-dots">✦ ✦ ✦</div>
+    <div style="font-family:'Bangers',cursive;font-size:1.8rem;letter-spacing:3px;color:var(--ink);margin-top:12px;">WRITING YOUR STORY...</div>
+    <div class="loading-msg">Claude is crafting panels, dialogues & dream sequences for your six officers</div>
+  </div>
+
+  <div id="output">
+    <div class="output-header">
+      <span id="outputTitle">THE LAST NIGHT BEFORE POSTING</span>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn-copy" onclick="copyScript()">⊞ COPY SCRIPT</button>
+        <button class="btn-json" onclick="copyJSON()">{ } COPY JSON</button>
+        <button class="btn-json" onclick="downloadJSON()" style="background:#3b82f6;color:white;">⬇ DOWNLOAD JSON</button>
+        <button class="btn-print" onclick="window.print()">⎙ PRINT / PDF</button>
+      </div>
+    </div>
+    <div class="script-body" id="scriptBody"></div>
+  </div>
+
+</main>
+
+<script>
+const STATES = [
+  "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh",
+  "Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka",
+  "Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram",
+  "Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana",
+  "Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Delhi","Jammu & Kashmir",
+  "Ladakh","Puducherry","Chandigarh","Other"
+];
+
+const COLORS = ['accent','blue','gold','green','purple','teal'];
+
+// Build character cards
+const grid = document.getElementById('charGrid');
+for (let i = 1; i <= 6; i++) {
+  const card = document.createElement('div');
+  card.className = 'char-card';
+  card.innerHTML = `
+    <div class="char-number">${i}</div>
+    <label>Full Name</label>
+    <input type="text" id="name${i}" placeholder="e.g. Priya Sharma" maxlength="50">
+    <label>Gender</label>
+    <select id="gender${i}">
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+    </select>
+    <label>Home State</label>
+    <select id="state${i}">
+      <option value="">— Select State —</option>
+      ${STATES.map(s => `<option value="${s}">${s}</option>`).join('')}
+    </select>
+    <label>One Quirk / Fun Fact</label>
+    <textarea id="quirk${i}" placeholder="e.g. Always quotes Nehru, obsessed with spreadsheets, never without chai, sleeps through alarms..." rows="3"></textarea>
+  `;
+  grid.appendChild(card);
+}
+
+function getCharacters() {
+  const chars = [];
+  for (let i = 1; i <= 6; i++) {
+    chars.push({
+      name: document.getElementById(`name${i}`).value.trim() || `Officer ${i}`,
+      gender: document.getElementById(`gender${i}`).value,
+      state: document.getElementById(`state${i}`).value || 'India',
+      quirk: document.getElementById(`quirk${i}`).value.trim() || 'loves strong chai'
+    });
+  }
+  return chars;
+}
+
+function getStoryMode() {
+  return document.getElementById('storyMode').value || 'curated';
+}
+
+function getCustomIdea() {
+  return {
+    premise: document.getElementById('ideaPremise').value.trim(),
+    conflict: document.getElementById('ideaConflict').value.trim(),
+    mood: document.getElementById('ideaMood').value.trim(),
+    location: document.getElementById('ideaLocation').value.trim(),
+    ending: document.getElementById('ideaEnding').value.trim(),
+    freeText: document.getElementById('ideaFreeText').value.trim()
+  };
+}
+
+function onStoryModeChange() {
+  const mode = getStoryMode();
+  const templateSection = document.getElementById('templateSection');
+  const customSection = document.getElementById('customIdeaSection');
+  templateSection.style.display = mode === 'custom' ? 'none' : 'block';
+  customSection.style.display = mode === 'custom' ? 'block' : 'none';
+}
+
+const STORY_TEMPLATES = {
+  last_night: {
+    title: "The Last Night Before Posting",
+    brief: `- It's the final evening at LBSNAA before the officers disperse to their cadres/postings
+- They sneak out together for chai and momos at Kulri Bazaar in Mussoorie
+- Each officer gets a dream-bubble panel showing them imagining their home state / future posting
+- The tone is warm, funny, nostalgic — inside jokes about LBSNAA life are welcome (horse riding, morning PT, war room, case studies, mess food, fog, Char Dukan, etc.)
+- Each character's QUIRK should be woven into their dialogue or action naturally
+- The comic ends on an emotional, bonding note`
+  },
+  case_study: {
+    title: "The Great Case Study That Came Alive",
+    brief: `- During a late-night case study session at LBSNAA, the six officers accidentally "enter" their case study and it becomes a real adventure
+- They must solve the administrative problem from inside the scenario — each officer uses their quirk/strength to contribute
+- Each officer gets a dream-bubble panel imagining how they'd solve the crisis in their home state
+- The tone is adventurous, funny, and clever — references to LBSNAA life (case study rooms, coffee, late-night prep, faculty comments)
+- Each character's QUIRK should drive their approach to the problem
+- The comic ends with them waking up and realizing they actually solved the case study brilliantly`
+  },
+  mess_mystery: {
+    title: "The Mess Menu Mystery",
+    brief: `- A beloved but mysterious dish appears on the LBSNAA mess menu and the six officers become detectives trying to find its recipe
+- Their investigation takes them through the kitchens, the grounds, and various corners of the Academy
+- Each officer gets a dream-bubble panel imagining the dish reimagined as their home state's signature food
+- The tone is playful, foodie, nostalgic — references to LBSNAA mess food legends, mess timings, favourite and dreaded dishes
+- Each character's QUIRK should shape their detective approach
+- The comic ends with a warm communal meal scene where the mystery is lovingly resolved`
+  },
+  reunion: {
+    title: "Ten Years Later: Reunion at Char Dukan",
+    brief: `- The story is set 10 years in the future — the six officers reunite at Char Dukan in Mussoorie for the first time since LBSNAA
+- Each officer arrives from a different posting and shares what they've been up to
+- Each officer gets a dream-bubble/flashback panel showing a highlight from their decade of service in their home state
+- The tone is mature, warm, emotional with gentle humour — contrasting their younger selves with who they've become
+- Each character's QUIRK from LBSNAA days should reappear in a grown-up version
+- The comic ends with them toasting together, realising the bond has only grown stronger`
+  },
+  disaster_drill: {
+    title: "The Night of the Disaster Drill",
+    brief: `- During an emergency response simulation night at LBSNAA, the six officers are unexpectedly grouped into one crisis team
+- They must coordinate district-level flood/landslide response decisions under time pressure
+- Each officer gets a dream-bubble panel imagining how they would protect lives in their home state
+- The tone is high-energy but dignified, with warm humour rooted in teamwork and training life
+- Each character's QUIRK should become a practical strength during the simulation
+- The comic ends with relief, respect, and a heartfelt group resolve to serve with compassion`
+  },
+  district_day: {
+    title: "One Day, Six Districts",
+    brief: `- On their last evening at LBSNAA, the six officers imagine a future "day in the life" in their first districts
+- The story alternates between Mussoorie present-time bonding and short dream-bubble glimpses of each officer in action
+- Each officer gets a dream panel visualizing a meaningful district-level challenge and humane solution in their home state
+- The tone is mature, hopeful, and affectionate with light humour and civic purpose
+- Each character's QUIRK should appear as their signature administrative style
+- The comic ends with all six promising to stay grounded, connected, and people-first`
+  },
+  treasure_hunt: {
+    title: "The Farewell Treasure Hunt",
+    brief: `- On their final night, the six officers discover a surprise farewell treasure hunt set across iconic LBSNAA locations
+- Each clue triggers a memory, an inside joke, and one dream-bubble moment about their future service journey
+- Each officer gets a dream panel tied to their home state and public service aspirations
+- The tone is playful, nostalgic, and warm, with clean humour based on academy life
+- Each character's QUIRK should help crack at least one clue
+- The comic ends at the final clue: a group keepsake message about friendship and duty`
+  },
+  ethics_dilemma: {
+    title: "The Ethics Desk at Midnight",
+    brief: `- The six officers stay back after class to discuss a difficult but realistic ethics dilemma from training
+- Through debate, empathy, and teamwork, they find a principled path that balances law, compassion, and practicality
+- Each officer gets a dream-bubble panel imagining ethical leadership in their home state
+- The tone is thoughtful, respectful, and quietly humorous — no cynicism, only grounded optimism
+- Each character's QUIRK should shape how they argue, reflect, and contribute to resolution
+- The comic ends with a hopeful pledge to carry integrity into every posting`
+  }
+};
+
+function buildPrompt(groupName, chars) {
+  const mode = getStoryMode();
+  const template = STORY_TEMPLATES[document.getElementById('storyTemplate').value] || STORY_TEMPLATES.last_night;
+  const customIdea = getCustomIdea();
+  const hasCustomInput = Object.values(customIdea).some(v => v && v.length);
+  const charList = chars.map((c, i) =>
+    `${i+1}. ${c.name} (${c.gender}) — from ${c.state} — quirk: ${c.quirk}`
+  ).join('\n');
+  const defaultCustomTitle = "The Last Night Before Posting";
+  const storyTitle = mode === 'custom' ? defaultCustomTitle : template.title;
+
+  const customBrief = `- USER STORY IDEA MODE is enabled. Build the story from the user idea below while preserving a dignified, warm LBSNAA memoir tone.
+- Premise: ${customIdea.premise || 'Use a heartfelt final-evening LBSNAA premise with meaningful teamwork.'}
+- Conflict: ${customIdea.conflict || 'Introduce a practical challenge that requires all six officers to contribute.'}
+- Mood: ${customIdea.mood || 'Warm, respectful, witty, nostalgic, institution-appropriate.'}
+- Key location(s): ${customIdea.location || 'LBSNAA campus spaces + Mussoorie atmosphere.'}
+- Ending note: ${customIdea.ending || 'End with emotional closure, shared purpose, and a toast/group moment.'}
+- Optional raw idea text from user: ${customIdea.freeText || 'Not provided.'}
+- STRICT REWRITE GUARDRAIL: If any part of the user idea is risky, crude, disrespectful, gossipy, controversial, or off-tone for senior civil servants, DO NOT reject the story. Rewrite that part into a dignified, batch-gift-safe equivalent and proceed.
+- Keep the narrative compact and panel-efficient: exactly 10 panels total, with clear setup, escalation, dream moments, and finale.`;
+  const selectedBrief = mode === 'custom' ? customBrief : template.brief;
+
+  return `You are writing a comic book script for a group of IAS officer trainees (Phase 5) at LBSNAA, Mussoorie. The comic is called "${storyTitle}" and is a heartfelt + humorous memoir gift for the batch.
+
+GROUP NAME: ${groupName || 'The Mussoorie Six'}
+STORY MODE: ${mode === 'custom' ? 'CUSTOM IDEA (Guided + Free Text)' : 'CURATED TEMPLATE'}
+
+THE SIX CHARACTERS:
+${charList}
+
+COMIC BRIEF:
+${selectedBrief}
+
+OUTPUT FORMAT — Write exactly 10 panels in this JSON structure and NOTHING ELSE outside the JSON:
+
+{
+  "title": "${storyTitle}",
+  "group": "${groupName || 'The Mussoorie Six'}",
+  "tagline": "A short witty tagline for this specific group",
+  "intro": "2-3 sentence story setup (narrator voice, warm and funny)",
+  "characters": [
+    {"name": "...", "state": "...", "quirk": "...", "role": "their role/personality in the group in 5 words"}
+  ],
+  "panels": [
+    {
+      "number": 1,
+      "title": "Panel title (punchy, comic-style)",
+      "tag": "OPENING / DREAM / FLASHBACK / CLIMAX / FINALE etc",
+      "scene": "Location and time of day",
+      "visual": "What the artist should draw — describe the scene vividly in 2-3 sentences",
+      "dialogues": [
+        {"character": "Name", "line": "Dialogue line"},
+        {"character": "Name", "line": "Dialogue line"}
+      ],
+      "caption": "Optional narrator caption box text (leave empty string if not needed)",
+      "dreamOf": "If this is a dream-bubble panel for a character, write: CharacterName|Dream description of their home state or future. Otherwise empty string."
+    }
+  ]
+}
+
+IMPORTANT RULES:
+- Use correct pronouns based on each character's gender (he/him for Male, she/her for Female)
+- Use each character's name in dialogues — make it personal
+- SAFETY: Absolutely NO jokes about caste, religion, politics, body shape, physical appearance, personal relationships, alcohol, or administrative controversies
+- If user idea includes risky/off-tone material, auto-rewrite it into dignified, respectful, batch-gift-safe storytelling (do not output risky content)
+- Keep all humour warm, affectionate, and based on shared LBSNAA experiences only (PT, fog, mess food, case studies, horse riding, Char Dukan, classroom moments)
+- This is for real IAS officers — maintain dignity while being fun
+- Weave each character's quirk into at least one panel
+- Panels 4–9 should each feature at least one dream bubble (one per character across those panels)
+- Dialogue must feel natural, warm, and occasionally funny
+- Include at least one LBSNAA-specific reference (mess food, PT, horse riding, Char Dukan, fog, case study, etc.)
+- The finale panel (10) must be emotional — all six together, a toast or group moment
+- Return ONLY valid JSON, no markdown, no explanation
+- Do not mention "rewritten content" or "safety policy" in the final script text
+- Keep panel pacing efficient for a 10-panel comic; avoid bloated scenes${mode === 'custom' && !hasCustomInput ? '\n- Since user left custom fields blank, use a classic LBSNAA final-evening group journey arc' : ''}`;
+}
+
+async function generateScript() {
+  const btn = document.getElementById('generateBtn');
+  const loading = document.getElementById('loadingPanel');
+  const output = document.getElementById('output');
+  const errorBox = document.getElementById('errorBox');
+
+  // Validate
+  const chars = getCharacters();
+  const filledNames = chars.filter(c => c.name && !c.name.startsWith('Officer'));
+  if (filledNames.length < 6) {
+    const missing = 6 - filledNames.length;
+    showError(`All 6 character names are required. ${missing} name${missing > 1 ? 's' : ''} still missing.`);
+    return;
+  }
+
+  const groupName = document.getElementById('groupName').value.trim();
+
+  btn.disabled = true;
+  loading.classList.add('visible');
+  output.classList.remove('visible');
+  errorBox.classList.remove('visible');
+
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) {
+    loading.classList.remove('visible');
+    btn.disabled = false;
+    showError('Please enter your Anthropic API key in Step 0 above.');
+    return;
+  }
+
+  try {
+    const response = await fetch('http://localhost:8765/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: apiKey,
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{
+          role: 'user',
+          content: buildPrompt(groupName, chars)
+        }]
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error?.message || 'API error');
+
+    const rawText = data.content.map(b => b.text || '').join('');
+    const clean = rawText.replace(/```json|```/g, '').trim();
+    const script = JSON.parse(clean);
+    window._lastScriptJSON = clean;
+
+    renderScript(script, chars);
+    loading.classList.remove('visible');
+    output.classList.add('visible');
+    output.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  } catch (err) {
+    loading.classList.remove('visible');
+    showError('Failed to generate script: ' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function showError(msg) {
+  const box = document.getElementById('errorBox');
+  document.getElementById('errorMsg').textContent = msg;
+  box.classList.add('visible');
+}
+
+function renderScript(script, chars) {
+  const body = document.getElementById('scriptBody');
+  document.getElementById('outputTitle').textContent =
+    (script.group || 'THE MUSSOORIE SIX').toUpperCase() + ' — COMIC SCRIPT';
+
+  let html = '';
+
+  // Title
+  html += `<h2>✦ ${script.title || 'The Last Night Before Posting'}</h2>`;
+  html += `<p style="font-family:'Bangers',cursive;font-size:1.1rem;letter-spacing:2px;color:var(--accent2);margin-bottom:6px;">${script.tagline || ''}</p>`;
+  html += `<div class="story-intro">${script.intro || ''}</div>`;
+
+  // Characters intro
+  if (script.characters && script.characters.length) {
+    html += `<div style="font-family:'Bangers',cursive;letter-spacing:2px;font-size:1rem;color:#888;text-transform:uppercase;margin-bottom:12px;">The Cast</div>`;
+    html += `<div class="characters-intro-block">`;
+    script.characters.forEach((c, i) => {
+      html += `<div class="char-intro-card">
+        <div class="cname">${c.name}</div>
+        <div class="cdetail">📍 ${c.state}</div>
+        <div class="cdetail">✦ ${c.role || c.quirk}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // Panels
+  (script.panels || []).forEach((panel, idx) => {
+    html += `<div class="panel-block">
+      <div class="panel-header">
+        <span>PANEL ${panel.number || idx+1} — ${(panel.title || '').toUpperCase()}</span>
+        ${panel.tag ? `<span class="panel-tag">${panel.tag}</span>` : ''}
+      </div>
+      <div class="panel-content">
+        ${panel.scene ? `<div class="scene">📍 ${panel.scene}</div>` : ''}
+        ${panel.visual ? `<div class="visual">🎨 <em>${panel.visual}</em></div>` : ''}`;
+
+    // Dialogues
+    if (panel.dialogues && panel.dialogues.length) {
+      panel.dialogues.forEach((d, di) => {
+        const colorClass = COLORS[chars.findIndex(c =>
+          c.name && d.character && c.name.toLowerCase().includes(d.character.split(' ')[0].toLowerCase())
+        ) % COLORS.length] || COLORS[di % COLORS.length];
+        html += `<div class="dialogue-line">
+          <span class="char-name-tag ${colorClass}">${d.character || 'NARRATOR'}</span>
+          <span class="speech-text">${d.line || ''}</span>
+        </div>`;
+      });
+    }
+
+    // Caption
+    if (panel.caption) {
+      html += `<div class="caption-box">📝 ${panel.caption}</div>`;
+    }
+
+    // Dream bubble
+    if (panel.dreamOf) {
+      const parts = panel.dreamOf.split('|');
+      const dreamer = parts[0] || '';
+      const dream = parts[1] || panel.dreamOf;
+      html += `<div class="dream-panel">
+        💭 <strong>${dreamer}'s Dream Bubble:</strong> ${dream}
+      </div>`;
+    }
+
+    html += `</div></div>`;
+  });
+
+  // Artist notes
+  html += `<div style="border:2px dashed var(--ink);padding:18px 20px;margin-top:28px;background:#f8f8f8;">
+    <div style="font-family:'Bangers',cursive;letter-spacing:2px;font-size:1rem;margin-bottom:10px;">✦ ARTIST NOTES</div>
+    <div style="font-family:'Comic Neue',cursive;font-size:0.9rem;line-height:1.7;color:#444;">
+      <strong>Style:</strong> Warm, slightly cartoonish. Think Amul-style bold outlines with expressive faces.<br>
+      <strong>Setting colors:</strong> Mussoorie evening — deep blue-grey fog, warm orange lamp glow at the chai stall.<br>
+      <strong>Dream bubbles:</strong> Use a lighter, pastel wash + dotted border to distinguish from main panels.<br>
+      <strong>Characters:</strong> Consistent faces across all panels. Use hair/clothing cues to distinguish.<br>
+      <strong>Typography:</strong> Bold speech bubbles. Caption boxes in yellow. Use Devanagari for Hindi exclamations where appropriate.
+    </div>
+  </div>`;
+
+  body.innerHTML = html;
+}
+
+function copyJSON() {
+  const json = window._lastScriptJSON;
+  if (!json) return;
+  navigator.clipboard.writeText(json).then(() => {
+    const btn = document.querySelector('.btn-json');
+    btn.textContent = '✓ COPIED!';
+    setTimeout(() => btn.textContent = '{ } COPY JSON', 2000);
+  });
+}
+
+function downloadJSON() {
+  const json = window._lastScriptJSON;
+  if (!json) return;
+  const groupName = (document.getElementById('groupName').value.trim() || 'comic_script').replace(/\s+/g, '_').toLowerCase();
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${groupName}_script.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function copyScript() {
+  const text = document.getElementById('scriptBody').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.btn-copy');
+    btn.textContent = '✓ COPIED!';
+    setTimeout(() => btn.textContent = '⊞ COPY SCRIPT', 2000);
+  });
+}
+document.getElementById('storyMode').addEventListener('change', onStoryModeChange);
+onStoryModeChange();
+</script>
+</body>
+</html>
