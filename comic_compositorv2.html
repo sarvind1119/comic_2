@@ -161,7 +161,7 @@
 
   .cover-grid {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 10px;
     margin-bottom: 16px;
   }
@@ -602,9 +602,9 @@
 
   <!-- STEP 3: Panel Images -->
   <div class="input-section">
-    <div class="section-title">3 — Upload 10 Panel Images</div>
+    <div class="section-title">3 — Upload Panel Images</div>
     <p style="font-size:0.75rem;color:var(--muted);margin-bottom:12px;">
-      Click each slot to upload the generated panel image. Order matters — Panel 1 first, Panel 10 last.
+      Click each slot to upload the generated panel image. Order matters — Panel 1 first, last panel at the final slot.
     </p>
     <div class="upload-grid" id="panelGrid"></div>
   </div>
@@ -639,7 +639,9 @@
 // ======================================================================
 // STATE
 // ======================================================================
-const defaultNames = ['Character 1','Character 2','Character 3','Character 4','Character 5','Character 6'];
+const MIN_CHAR_COUNT = 6;
+const MAX_CHAR_COUNT = 26;
+const defaultPanelCount = 10;
 
 // In-memory storage of uploaded file data URLs
 const fileStore = {};
@@ -696,25 +698,64 @@ loadSavedLayout();
 // UPLOAD GRIDS
 // ======================================================================
 const coverGrid = document.getElementById('coverGrid');
-for (let i = 0; i < 6; i++) {
-  const slot = document.createElement('div');
-  slot.className = 'cover-slot';
-  slot.innerHTML = `<span class="slot-label">${defaultNames[i]}</span>`;
-  slot.onclick = () => pickFile(slot, `cover-${i}`);
-  coverGrid.appendChild(slot);
+const panelGrid = document.getElementById('panelGrid');
+
+function normalizeCharacterCount(n) {
+  const raw = Number(n);
+  if (!Number.isFinite(raw)) return MIN_CHAR_COUNT;
+  return Math.max(MIN_CHAR_COUNT, Math.min(MAX_CHAR_COUNT, Math.floor(raw)));
 }
 
-const panelGrid = document.getElementById('panelGrid');
-for (let i = 0; i < 10; i++) {
-  const slot = document.createElement('div');
-  slot.className = 'upload-slot';
-  slot.innerHTML = `
-    <span class="slot-label">Panel ${i+1}</span>
-    <span class="slot-hint">Click to upload</span>
-  `;
-  slot.onclick = () => pickFile(slot, `panel-${i}`);
-  panelGrid.appendChild(slot);
+function defaultCharacterName(i) {
+  return `Character ${i + 1}`;
 }
+
+function renderCoverSlots(characterCount, names = []) {
+  coverGrid.innerHTML = '';
+  for (let i = 0; i < characterCount; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'cover-slot';
+    slot.innerHTML = `<span class="slot-label">${names[i] || defaultCharacterName(i)}</span>`;
+    slot.onclick = () => pickFile(slot, `cover-${i}`);
+    if (fileStore[`cover-${i}`]) {
+      slot.classList.add('filled');
+      const img = document.createElement('img');
+      img.src = fileStore[`cover-${i}`];
+      slot.appendChild(img);
+    }
+    coverGrid.appendChild(slot);
+  }
+}
+
+function renderPanelSlots(panelCount) {
+  panelGrid.innerHTML = '';
+  for (let i = 0; i < panelCount; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'upload-slot';
+    slot.innerHTML = `
+      <span class="slot-label">Panel ${i+1}</span>
+      <span class="slot-hint">Click to upload</span>
+    `;
+    slot.onclick = () => pickFile(slot, `panel-${i}`);
+    if (fileStore[`panel-${i}`]) {
+      slot.classList.add('filled');
+      const img = document.createElement('img');
+      img.src = fileStore[`panel-${i}`];
+      slot.appendChild(img);
+    }
+    panelGrid.appendChild(slot);
+  }
+}
+
+function updateUploadGridsFromScript(script) {
+  const characterCount = normalizeCharacterCount((script?.characters || []).length || MIN_CHAR_COUNT);
+  const panelCount = Number((script?.panels || []).length) || defaultPanelCount;
+  const names = (script?.characters || []).map(c => c.name || '').slice(0, characterCount);
+  renderCoverSlots(characterCount, names);
+  renderPanelSlots(panelCount);
+}
+
+updateUploadGridsFromScript(null);
 
 function pickFile(slot, key) {
   const input = document.createElement('input');
@@ -748,7 +789,7 @@ document.getElementById('scriptInput').addEventListener('input', function() {
     const raw = this.value.trim();
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     const script = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
-    if (script.characters) updateCoverLabels(script.characters);
+    updateUploadGridsFromScript(script);
   } catch(e) {}
 });
 
@@ -790,16 +831,22 @@ function validateScriptContract(script) {
 
   if (!script.title || typeof script.title !== 'string') errors.push('Missing required field: title');
   if (!script.group || typeof script.group !== 'string') errors.push('Missing required field: group');
-  if (!Array.isArray(script.characters) || script.characters.length !== 6) {
-    errors.push('characters must be an array of exactly 6 entries');
+  if (!Array.isArray(script.characters)) {
+    errors.push('characters must be an array');
+    return errors;
+  }
+  const characterCount = normalizeCharacterCount(script.characters.length);
+  if (script.characters.length !== characterCount) {
+    errors.push(`characters must contain ${MIN_CHAR_COUNT}-${MAX_CHAR_COUNT} entries (found ${script.characters.length})`);
   }
 
   if (!Array.isArray(script.panels)) {
     errors.push('panels must be an array');
     return errors;
   }
-  if (script.panels.length !== 10) {
-    errors.push(`panels must contain exactly 10 entries (found ${script.panels.length})`);
+  const expectedPanelCount = script.characters.length + 4;
+  if (script.panels.length !== expectedPanelCount) {
+    errors.push(`panels must contain exactly ${expectedPanelCount} entries for ${script.characters.length} characters (found ${script.panels.length})`);
   }
 
   const seen = new Set();
@@ -809,7 +856,7 @@ function validateScriptContract(script) {
       errors.push(`panel[${idx}] missing integer "number"`);
       return;
     }
-    if (num < 1 || num > 10) errors.push(`panel number out of range: ${num} (expected 1-10)`);
+    if (num < 1 || num > expectedPanelCount) errors.push(`panel number out of range: ${num} (expected 1-${expectedPanelCount})`);
     if (seen.has(num)) errors.push(`duplicate panel number: ${num}`);
     seen.add(num);
     if (!Array.isArray(panel.dialogues)) errors.push(`panel ${num} must include dialogues[]`);
@@ -824,8 +871,9 @@ function validateBuildInputs(script) {
   errors.push(...validateScriptContract(script));
   if (!script) return errors;
 
+  const expectedPanelCount = (script.panels || []).length;
   const missingPanels = [];
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < expectedPanelCount; i++) {
     if (!fileStore[`panel-${i}`]) missingPanels.push(i + 1);
   }
   if (missingPanels.length) {
@@ -833,9 +881,9 @@ function validateBuildInputs(script) {
   }
 
   const panelNumbers = (script.panels || []).map(p => Number(p.number)).filter(Number.isInteger).sort((a, b) => a - b);
-  const expected = Array.from({ length: 10 }, (_, i) => i + 1);
-  if (panelNumbers.length === 10 && panelNumbers.join(',') !== expected.join(',')) {
-    errors.push(`Panel numbering mismatch: expected 1-10, found ${panelNumbers.join(', ')}`);
+  const expected = Array.from({ length: expectedPanelCount }, (_, i) => i + 1);
+  if (panelNumbers.length === expectedPanelCount && panelNumbers.join(',') !== expected.join(',')) {
+    errors.push(`Panel numbering mismatch: expected 1-${expectedPanelCount}, found ${panelNumbers.join(', ')}`);
   }
 
   return errors;
@@ -849,6 +897,7 @@ function buildComic() {
     showBuildErrors(['Please paste valid comic script JSON before building.']);
     return;
   }
+  updateUploadGridsFromScript(script);
 
   const validationErrors = validateBuildInputs(script);
   if (validationErrors.length) {
@@ -1326,3 +1375,4 @@ function printComic() {
 </script>
 </body>
 </html>
+

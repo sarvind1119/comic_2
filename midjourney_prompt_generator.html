@@ -830,74 +830,122 @@ window._latestChars = [];
 window._latestStyle = '';
 window._latestParams = '';
 
-// Build character input grid
 const charGrid = document.getElementById('charGrid');
+const srefGrid = document.getElementById('srefGrid');
 const charNames = ['Indra Mallo','Nilkanth S. Avhad','Vatsala Vasudeva','Shyamal Misra','Anandrao Patil','Kaling Tayeng'];
 const charStates = ['Maharashtra','Punjab','Gujarat','Haryana','Tamil Nadu','Arunachal Pradesh'];
+const MIN_CHAR_COUNT = 6;
+const MAX_CHAR_COUNT = 26;
+let uiCharacterCount = MIN_CHAR_COUNT;
 
-for (let i = 0; i < 6; i++) {
-  const div = document.createElement('div');
-  div.className = 'char-row';
-  div.setAttribute('data-num', i+1);
-  div.innerHTML = `
-    <div>
-      <label>Name</label>
-      <input type="text" id="cname${i}" value="${charNames[i]}" placeholder="Character name" oninput="saveToStorage()">
-    </div>
-    <div>
-      <label>Gender</label>
-      <select id="cgender${i}" onchange="saveToStorage()">
-        <option value="male">Male</option>
-        <option value="female">Female</option>
-      </select>
-    </div>
-    <div>
-      <label>Skin Tone</label>
-      <select id="cskin${i}" onchange="saveToStorage()">
-        <option value="medium brown skin">Medium Brown</option>
-        <option value="light brown skin">Light Brown</option>
-        <option value="dark brown skin">Dark Brown</option>
-        <option value="wheatish complexion">Wheatish</option>
-        <option value="fair complexion">Fair</option>
-      </select>
-    </div>
-    <div class="full-width">
-      <label>Visual Description (hair, face, build, distinctive feature)</label>
-      <input type="text" id="cdesc${i}" placeholder="e.g. young Indian woman, short black hair, confident smile, wearing kurta" value="" oninput="saveToStorage()">
-    </div>
-    <div class="full-width">
-      <label>Signature Clothing / Accessory</label>
-      <input type="text" id="ccloth${i}" placeholder="e.g. always wears a wristwatch, blue kurta, glasses" oninput="saveToStorage()">
-    </div>
-    <div class="full-width" style="margin-top:4px;">
-      <label style="display:flex;align-items:center;gap:8px;color:#aaa;">
-        📸 Passport Photo URL
-        <span id="photoStatus${i}" style="font-size:0.65rem;padding:2px 8px;border-radius:2px;display:none;font-family:Space Mono,monospace;"></span>
-      </label>
-      <input type="text" id="cphoto${i}"
-        placeholder="https://i.imgur.com/xxxxx.jpg (Imgur only!)"
-        style="font-size:0.72rem;border-color:#333;"
-        oninput="validatePhotoUrl(${i}); saveToStorage()">
-    </div>
-  `;
-  charGrid.appendChild(div);
+function normalizeUiCharacterCount(n) {
+  const num = Number(n);
+  if (!Number.isFinite(num)) return MIN_CHAR_COUNT;
+  return Math.max(MIN_CHAR_COUNT, Math.min(MAX_CHAR_COUNT, Math.floor(num)));
 }
 
-// Build sref URL input grid
-const srefGrid = document.getElementById('srefGrid');
-for (let i = 0; i < 6; i++) {
-  const div = document.createElement('div');
-  div.className = 'char-row';
-  div.setAttribute('data-num', i+1);
-  div.style.gridTemplateColumns = '1fr';
-  div.innerHTML = `
-    <div>
-      <label>${charNames[i]}</label>
-      <input type="text" id="sref-${i}" placeholder="https://cdn.midjourney.com/..."
-        style="font-size:0.72rem;" oninput="onSrefInput(${i}, this.value)">
-    </div>
-  `;
-  srefGrid.appendChild(div);
+function getUiCharacterCount() {
+  const rows = document.querySelectorAll('#charGrid .char-row').length;
+  return rows || uiCharacterCount || MIN_CHAR_COUNT;
+}
+
+function getDefaultCharName(i) {
+  return charNames[i] || `Character ${i + 1}`;
+}
+
+function snapshotUiChars() {
+  const count = getUiCharacterCount();
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    out.push({
+      name: document.getElementById(`cname${i}`)?.value || '',
+      gender: document.getElementById(`cgender${i}`)?.value || 'male',
+      skin: document.getElementById(`cskin${i}`)?.value || 'medium brown skin',
+      desc: document.getElementById(`cdesc${i}`)?.value || '',
+      cloth: document.getElementById(`ccloth${i}`)?.value || '',
+      photo: document.getElementById(`cphoto${i}`)?.value || '',
+      sref: document.getElementById(`sref-${i}`)?.value || ''
+    });
+  }
+  return out;
+}
+
+function renderCharacterSetup(count, seedChars = []) {
+  uiCharacterCount = normalizeUiCharacterCount(count);
+  const prev = snapshotUiChars();
+  charGrid.innerHTML = '';
+  srefGrid.innerHTML = '';
+
+  for (let i = 0; i < uiCharacterCount; i++) {
+    const seed = seedChars[i] || {};
+    const existing = prev[i] || {};
+    const merged = {
+      name: existing.name || seed.name || getDefaultCharName(i),
+      gender: existing.gender || ((seed.gender || '').toLowerCase() === 'female' ? 'female' : 'male'),
+      skin: existing.skin || 'medium brown skin',
+      desc: existing.desc || '',
+      cloth: existing.cloth || '',
+      photo: existing.photo || '',
+      sref: existing.sref || ''
+    };
+
+    const div = document.createElement('div');
+    div.className = 'char-row';
+    div.setAttribute('data-num', i + 1);
+    div.innerHTML = `
+      <div>
+        <label>Name</label>
+        <input type="text" id="cname${i}" value="${(merged.name || '').replace(/"/g, '&quot;')}" placeholder="Character name" oninput="saveToStorage()">
+      </div>
+      <div>
+        <label>Gender</label>
+        <select id="cgender${i}" onchange="saveToStorage()">
+          <option value="male" ${merged.gender === 'male' ? 'selected' : ''}>Male</option>
+          <option value="female" ${merged.gender === 'female' ? 'selected' : ''}>Female</option>
+        </select>
+      </div>
+      <div>
+        <label>Skin Tone</label>
+        <select id="cskin${i}" onchange="saveToStorage()">
+          <option value="medium brown skin" ${merged.skin === 'medium brown skin' ? 'selected' : ''}>Medium Brown</option>
+          <option value="light brown skin" ${merged.skin === 'light brown skin' ? 'selected' : ''}>Light Brown</option>
+          <option value="dark brown skin" ${merged.skin === 'dark brown skin' ? 'selected' : ''}>Dark Brown</option>
+          <option value="wheatish complexion" ${merged.skin === 'wheatish complexion' ? 'selected' : ''}>Wheatish</option>
+          <option value="fair complexion" ${merged.skin === 'fair complexion' ? 'selected' : ''}>Fair</option>
+        </select>
+      </div>
+      <div class="full-width">
+        <label>Visual Description (hair, face, build, distinctive feature)</label>
+        <input type="text" id="cdesc${i}" placeholder="e.g. young Indian woman, short black hair, confident smile, wearing kurta" value="${(merged.desc || '').replace(/"/g, '&quot;')}" oninput="saveToStorage()">
+      </div>
+      <div class="full-width">
+        <label>Signature Clothing / Accessory</label>
+        <input type="text" id="ccloth${i}" placeholder="e.g. always wears a wristwatch, blue kurta, glasses" value="${(merged.cloth || '').replace(/"/g, '&quot;')}" oninput="saveToStorage()">
+      </div>
+      <div class="full-width" style="margin-top:4px;">
+        <label style="display:flex;align-items:center;gap:8px;color:#aaa;">
+          Passport Photo URL
+          <span id="photoStatus${i}" style="font-size:0.65rem;padding:2px 8px;border-radius:2px;display:none;font-family:Space Mono,monospace;"></span>
+        </label>
+        <input type="text" id="cphoto${i}" placeholder="https://i.imgur.com/xxxxx.jpg (Imgur only!)" value="${(merged.photo || '').replace(/"/g, '&quot;')}" style="font-size:0.72rem;border-color:#333;" oninput="validatePhotoUrl(${i}); saveToStorage()">
+      </div>
+    `;
+    charGrid.appendChild(div);
+
+    const srefDiv = document.createElement('div');
+    srefDiv.className = 'char-row';
+    srefDiv.setAttribute('data-num', i + 1);
+    srefDiv.style.gridTemplateColumns = '1fr';
+    srefDiv.innerHTML = `
+      <div>
+        <label>${(merged.name || `Character ${i + 1}`).replace(/</g, '&lt;')}</label>
+        <input type="text" id="sref-${i}" placeholder="https://cdn.midjourney.com/..." value="${(merged.sref || '').replace(/"/g, '&quot;')}" style="font-size:0.72rem;" oninput="onSrefInput(${i}, this.value)">
+      </div>
+    `;
+    srefGrid.appendChild(srefDiv);
+  }
+
+  for (let i = 0; i < uiCharacterCount; i++) validatePhotoUrl(i);
 }
 
 // --- localStorage save/load ---
@@ -909,18 +957,19 @@ function saveToStorage() {
   data.aspectRatio = document.getElementById('aspectRatio').value;
   data.stylize = document.getElementById('stylize').value;
   data.mjVersion = document.getElementById('mjVersion').value;
+  data.charCount = getUiCharacterCount();
   data.chars = [];
   data.srefs = [];
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < getUiCharacterCount(); i++) {
     data.chars.push({
-      name: document.getElementById(`cname${i}`).value,
-      gender: document.getElementById(`cgender${i}`).value,
-      skin: document.getElementById(`cskin${i}`).value,
-      desc: document.getElementById(`cdesc${i}`).value,
-      cloth: document.getElementById(`ccloth${i}`).value,
-      photo: document.getElementById(`cphoto${i}`).value
+      name: document.getElementById(`cname${i}`)?.value || '',
+      gender: document.getElementById(`cgender${i}`)?.value || 'male',
+      skin: document.getElementById(`cskin${i}`)?.value || 'medium brown skin',
+      desc: document.getElementById(`cdesc${i}`)?.value || '',
+      cloth: document.getElementById(`ccloth${i}`)?.value || '',
+      photo: document.getElementById(`cphoto${i}`)?.value || ''
     });
-    data.srefs.push(document.getElementById(`sref-${i}`).value);
+    data.srefs.push(document.getElementById(`sref-${i}`)?.value || '');
   }
   localStorage.setItem('mjPromptGen', JSON.stringify(data));
 }
@@ -936,24 +985,29 @@ function loadFromStorage() {
     if (data.aspectRatio) document.getElementById('aspectRatio').value = data.aspectRatio;
     if (data.stylize) document.getElementById('stylize').value = data.stylize;
     if (data.mjVersion) document.getElementById('mjVersion').value = data.mjVersion;
+    const desiredCount = normalizeUiCharacterCount(data.charCount || (Array.isArray(data.chars) ? data.chars.length : MIN_CHAR_COUNT));
+    renderCharacterSetup(desiredCount, data.chars || []);
     if (data.chars) {
       data.chars.forEach((c, i) => {
-        if (c.name) document.getElementById(`cname${i}`).value = c.name;
-        if (c.gender) document.getElementById(`cgender${i}`).value = c.gender;
-        if (c.skin) document.getElementById(`cskin${i}`).value = c.skin;
-        if (c.desc) document.getElementById(`cdesc${i}`).value = c.desc;
-        if (c.cloth) document.getElementById(`ccloth${i}`).value = c.cloth;
-        if (c.photo) { document.getElementById(`cphoto${i}`).value = c.photo; validatePhotoUrl(i); }
+        if (document.getElementById(`cname${i}`) && c.name) document.getElementById(`cname${i}`).value = c.name;
+        if (document.getElementById(`cgender${i}`) && c.gender) document.getElementById(`cgender${i}`).value = c.gender;
+        if (document.getElementById(`cskin${i}`) && c.skin) document.getElementById(`cskin${i}`).value = c.skin;
+        if (document.getElementById(`cdesc${i}`) && c.desc) document.getElementById(`cdesc${i}`).value = c.desc;
+        if (document.getElementById(`ccloth${i}`) && c.cloth) document.getElementById(`ccloth${i}`).value = c.cloth;
+        if (document.getElementById(`cphoto${i}`) && c.photo) { document.getElementById(`cphoto${i}`).value = c.photo; validatePhotoUrl(i); }
       });
     }
     if (data.srefs) {
       data.srefs.forEach((url, i) => {
-        if (url) document.getElementById(`sref-${i}`).value = url;
+        if (document.getElementById(`sref-${i}`) && url) document.getElementById(`sref-${i}`).value = url;
       });
     }
-  } catch(e) {}
+  } catch(e) {
+    renderCharacterSetup(MIN_CHAR_COUNT);
+  }
 }
 
+renderCharacterSetup(MIN_CHAR_COUNT);
 loadFromStorage();
 loadAutomationState();
 renderAutomationDashboard();
@@ -968,9 +1022,9 @@ document.getElementById('mjVersion').addEventListener('change', saveToStorage);
 
 function getCharacters() {
   const chars = [];
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < getUiCharacterCount(); i++) {
     chars.push({
-      name: document.getElementById(`cname${i}`).value.trim() || charNames[i],
+      name: document.getElementById(`cname${i}`).value.trim() || getDefaultCharName(i),
       gender: document.getElementById(`cgender${i}`).value,
       skin: document.getElementById(`cskin${i}`).value,
       desc: document.getElementById(`cdesc${i}`).value.trim(),
@@ -979,6 +1033,14 @@ function getCharacters() {
     });
   }
   return chars;
+}
+
+function syncCharacterSetupForScript(script) {
+  const scriptChars = Array.isArray(script?.characters) ? script.characters : [];
+  const desired = normalizeUiCharacterCount(scriptChars.length || MIN_CHAR_COUNT);
+  if (desired !== getUiCharacterCount()) {
+    renderCharacterSetup(desired, scriptChars);
+  }
 }
 
 function getStyleString() {
@@ -1137,16 +1199,22 @@ function validateScriptSchema(script) {
 
   if (!script.title || typeof script.title !== 'string') errors.push('Missing required field: title');
   if (!script.group || typeof script.group !== 'string') errors.push('Missing required field: group');
-  if (!Array.isArray(script.characters) || script.characters.length !== 6) {
-    errors.push('characters must be an array of exactly 6 entries');
+  if (!Array.isArray(script.characters)) {
+    errors.push('characters must be an array');
+    return errors;
+  }
+  const characterCount = script.characters.length;
+  if (characterCount < MIN_CHAR_COUNT || characterCount > MAX_CHAR_COUNT) {
+    errors.push(`characters must contain ${MIN_CHAR_COUNT}-${MAX_CHAR_COUNT} entries (found ${characterCount})`);
   }
 
   if (!Array.isArray(script.panels)) {
     errors.push('panels must be an array');
     return errors;
   }
-  if (script.panels.length !== 10) {
-    errors.push(`panels must contain exactly 10 entries (found ${script.panels.length})`);
+  const expectedPanels = characterCount + 4;
+  if (script.panels.length !== expectedPanels) {
+    errors.push(`panels must contain exactly ${expectedPanels} entries for ${characterCount} characters (found ${script.panels.length})`);
   }
 
   const seen = new Set();
@@ -1156,8 +1224,8 @@ function validateScriptSchema(script) {
       errors.push(`panel[${idx}] missing integer "number"`);
       return;
     }
-    if (panelNo < 1 || panelNo > 10) {
-      errors.push(`panel number out of range: ${panelNo} (expected 1-10)`);
+    if (panelNo < 1 || panelNo > expectedPanels) {
+      errors.push(`panel number out of range: ${panelNo} (expected 1-${expectedPanels})`);
     }
     if (seen.has(panelNo)) {
       errors.push(`duplicate panel number: ${panelNo}`);
@@ -1174,7 +1242,7 @@ function validateScriptSchema(script) {
 function getValidSrefUrlsOrThrow() {
   const urls = [];
   const invalidRows = [];
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < getUiCharacterCount(); i++) {
     const val = getSrefValue(i);
     if (!val) continue;
     if (!isApprovedMidjourneyUrl(val)) {
@@ -1222,6 +1290,8 @@ async function generatePrompts() {
     if (schemaErrors.length) {
       throw new Error('Script schema validation failed:\n- ' + schemaErrors.join('\n- '));
     }
+    syncCharacterSetupForScript(script);
+    saveToStorage();
 
     const panels = script.panels || [];
     if (!panels.length) throw new Error('No panels found in the script.');
@@ -1315,7 +1385,7 @@ Return ONLY a JSON array — no explanation, no markdown:
 
 function getSrefUrls() {
   const urls = [];
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < getUiCharacterCount(); i++) {
     const val = getSrefValue(i);
     if (val && val.startsWith('http') && isApprovedMidjourneyUrl(val)) urls.push(val);
   }
@@ -1334,7 +1404,7 @@ function renderOutput(prompts, panels, chars, script, style, params) {
   const srefUrls = getSrefUrls();
   const srefCount = srefUrls.length;
   document.getElementById('outputTitle').textContent =
-    `✦ ${(script.group || '').toUpperCase()} — ${prompts.length} PROMPTS · ${photoCount}/6 PHOTOS · ${srefCount}/6 SREF`;
+    `✦ ${(script.group || '').toUpperCase()} — ${prompts.length} PROMPTS · ${photoCount}/${chars.length} PHOTOS · ${srefCount}/${chars.length} SREF`;
 
   // Individual panels tab
   const list = document.getElementById('promptList');
@@ -1554,8 +1624,8 @@ function buildScenePacket(prompts, panels, chars, script, style) {
 
   const checklist = [
     'Checklist:',
-    '1. Generate all 10 panels in panel-number order.',
-    '2. Keep filenames exactly: panel_01.png ... panel_10.png.',
+    `1. Generate all ${prompts.length} panels in panel-number order.`,
+    `2. Keep filenames exactly: panel_01.png ... panel_${String(prompts.length).padStart(2, '0')}.png.`,
     '3. Verify each image has no text and correct character count.',
     '4. Re-run any panel with face/style drift before exporting final set.',
     '5. Upload in matching order to the Comic Compositor.'
@@ -1580,7 +1650,7 @@ function buildCharacterLock() {
   const script = window._latestScript || {};
   const chars = window._latestChars || getCharacters();
   const srefs = [];
-  for (let i = 0; i < 6; i++) srefs.push(getSrefValue(i) || '');
+  for (let i = 0; i < getUiCharacterCount(); i++) srefs.push(getSrefValue(i) || '');
   return {
     group: script.group || '',
     title: script.title || '',

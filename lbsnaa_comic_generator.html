@@ -507,7 +507,7 @@
   <div class="header-inner">
     <div class="badge">✦ LBSNAA · Phase 5 · Batch Memory</div>
     <h1>The Last Night <span>Before Posting</span></h1>
-    <p class="subtitle">Enter 6 officer trainees → get a personalized comic script ✦ 10 panels ✦ Ready for illustration</p>
+    <p class="subtitle">Enter officer trainees → get a personalized comic script ✦ panel count auto-scales ✦ Ready for illustration</p>
   </div>
 </header>
 
@@ -571,7 +571,19 @@
     </div>
   </div>
 
-  <div class="section-label">✦ Step 2 — Enter the Six Characters</div>
+  <div class="section-label">✦ Step 2 — Cast Size + Panel Count</div>
+  <div style="border:var(--border);background:white;box-shadow:var(--shadow);padding:16px 20px;margin-bottom:8px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div>
+      <label style="display:block;font-family:'Bangers',cursive;letter-spacing:1px;margin-bottom:6px;">Character Count (6-26)</label>
+      <input type="number" id="characterCount" min="6" max="26" step="1" value="6" style="width:100%;border:2px solid var(--ink);font-family:'Comic Neue',cursive;font-size:0.95rem;padding:10px 14px;outline:none;background:#fffde7;">
+    </div>
+    <div>
+      <label style="display:block;font-family:'Bangers',cursive;letter-spacing:1px;margin-bottom:6px;">Panel Count (Auto)</label>
+      <input type="text" id="panelCountDisplay" value="10" readonly style="width:100%;border:2px solid var(--ink);font-family:'Comic Neue',cursive;font-size:0.95rem;padding:10px 14px;outline:none;background:#f3f4f6;color:#374151;">
+    </div>
+  </div>
+
+  <div class="section-label">✦ Step 2b — Enter Characters</div>
   <div class="characters-grid" id="charGrid"></div>
 
   <div class="section-label">✦ Step 3 — Generate</div>
@@ -588,7 +600,7 @@
   <div class="loading-panel" id="loadingPanel">
     <div class="loading-dots">✦ ✦ ✦</div>
     <div style="font-family:'Bangers',cursive;font-size:1.8rem;letter-spacing:3px;color:var(--ink);margin-top:12px;">WRITING YOUR STORY...</div>
-    <div class="loading-msg">Claude is crafting panels, dialogues & dream sequences for your six officers</div>
+    <div class="loading-msg">Claude is crafting panels, dialogues & dream sequences for your officer cohort</div>
   </div>
 
   <div id="output">
@@ -618,37 +630,76 @@ const STATES = [
 
 const COLORS = ['accent','blue','gold','green','purple','teal'];
 
-// Build character cards
-const grid = document.getElementById('charGrid');
-for (let i = 1; i <= 6; i++) {
-  const card = document.createElement('div');
-  card.className = 'char-card';
-  card.innerHTML = `
-    <div class="char-number">${i}</div>
-    <label>Full Name</label>
-    <input type="text" id="name${i}" placeholder="e.g. Priya Sharma" maxlength="50">
-    <label>Gender</label>
-    <select id="gender${i}">
-      <option value="Male">Male</option>
-      <option value="Female">Female</option>
-    </select>
-    <label>Home State</label>
-    <select id="state${i}">
-      <option value="">— Select State —</option>
-      ${STATES.map(s => `<option value="${s}">${s}</option>`).join('')}
-    </select>
-    <label>One Quirk / Fun Fact</label>
-    <textarea id="quirk${i}" placeholder="e.g. Always quotes Nehru, obsessed with spreadsheets, never without chai, sleeps through alarms..." rows="3"></textarea>
-  `;
-  grid.appendChild(card);
+function getCharacterCount() {
+  const raw = Number(document.getElementById('characterCount')?.value || 6);
+  const safe = Math.max(6, Math.min(26, Number.isFinite(raw) ? Math.floor(raw) : 6));
+  return safe;
+}
+
+function getPanelCount() {
+  return getCharacterCount() + 4;
+}
+
+function refreshPanelCountDisplay() {
+  const el = document.getElementById('panelCountDisplay');
+  if (el) el.value = String(getPanelCount());
+}
+
+// Build character cards dynamically
+function renderCharacterCards() {
+  const grid = document.getElementById('charGrid');
+  const count = getCharacterCount();
+
+  // Preserve existing values before re-render.
+  const prev = {};
+  Array.from(grid.querySelectorAll('.char-card')).forEach((_, idx) => {
+    const i = idx + 1;
+    prev[i] = {
+      name: document.getElementById(`name${i}`)?.value || '',
+      gender: document.getElementById(`gender${i}`)?.value || 'Male',
+      allotmentYear: document.getElementById(`allotmentYear${i}`)?.value || '',
+      state: document.getElementById(`state${i}`)?.value || '',
+      quirk: document.getElementById(`quirk${i}`)?.value || ''
+    };
+  });
+
+  grid.innerHTML = '';
+  for (let i = 1; i <= count; i++) {
+    const prior = prev[i] || {};
+    const card = document.createElement('div');
+    card.className = 'char-card';
+    card.innerHTML = `
+      <div class="char-number">${i}</div>
+      <label>Full Name</label>
+      <input type="text" id="name${i}" placeholder="e.g. Priya Sharma" maxlength="50" value="${(prior.name || '').replace(/"/g, '&quot;')}">
+      <label>Gender</label>
+      <select id="gender${i}">
+        <option value="Male" ${prior.gender === 'Male' ? 'selected' : ''}>Male</option>
+        <option value="Female" ${prior.gender === 'Female' ? 'selected' : ''}>Female</option>
+      </select>
+      <label>Allotment Year</label>
+      <input type="number" id="allotmentYear${i}" min="1960" max="2100" step="1" placeholder="e.g. 1997" value="${(prior.allotmentYear || '').replace(/"/g, '&quot;')}">
+      <label>Home State</label>
+      <select id="state${i}">
+        <option value="">— Select State —</option>
+        ${STATES.map(s => `<option value="${s}" ${prior.state === s ? 'selected' : ''}>${s}</option>`).join('')}
+      </select>
+      <label>One Quirk / Fun Fact</label>
+      <textarea id="quirk${i}" placeholder="e.g. Always quotes Nehru, obsessed with spreadsheets, never without chai, sleeps through alarms..." rows="3">${prior.quirk || ''}</textarea>
+    `;
+    grid.appendChild(card);
+  }
 }
 
 function getCharacters() {
   const chars = [];
-  for (let i = 1; i <= 6; i++) {
+  const count = getCharacterCount();
+  for (let i = 1; i <= count; i++) {
+    const yearValue = Number(document.getElementById(`allotmentYear${i}`).value);
     chars.push({
       name: document.getElementById(`name${i}`).value.trim() || `Officer ${i}`,
       gender: document.getElementById(`gender${i}`).value,
+      allotment_year: Number.isInteger(yearValue) ? yearValue : null,
       state: document.getElementById(`state${i}`).value || 'India',
       quirk: document.getElementById(`quirk${i}`).value.trim() || 'loves strong chai'
     });
@@ -691,7 +742,7 @@ const STORY_TEMPLATES = {
   },
   case_study: {
     title: "The Great Case Study That Came Alive",
-    brief: `- During a late-night case study session at LBSNAA, the six officers accidentally "enter" their case study and it becomes a real adventure
+    brief: `- During a late-night case study session at LBSNAA, the officers accidentally "enter" their case study and it becomes a real adventure
 - They must solve the administrative problem from inside the scenario — each officer uses their quirk/strength to contribute
 - Each officer gets a dream-bubble panel imagining how they'd solve the crisis in their home state
 - The tone is adventurous, funny, and clever — references to LBSNAA life (case study rooms, coffee, late-night prep, faculty comments)
@@ -700,7 +751,7 @@ const STORY_TEMPLATES = {
   },
   mess_mystery: {
     title: "The Mess Menu Mystery",
-    brief: `- A beloved but mysterious dish appears on the LBSNAA mess menu and the six officers become detectives trying to find its recipe
+    brief: `- A beloved but mysterious dish appears on the LBSNAA mess menu and the officers become detectives trying to find its recipe
 - Their investigation takes them through the kitchens, the grounds, and various corners of the Academy
 - Each officer gets a dream-bubble panel imagining the dish reimagined as their home state's signature food
 - The tone is playful, foodie, nostalgic — references to LBSNAA mess food legends, mess timings, favourite and dreaded dishes
@@ -709,7 +760,7 @@ const STORY_TEMPLATES = {
   },
   reunion: {
     title: "Ten Years Later: Reunion at Char Dukan",
-    brief: `- The story is set 10 years in the future — the six officers reunite at Char Dukan in Mussoorie for the first time since LBSNAA
+    brief: `- The story is set 10 years in the future — the officers reunite at Char Dukan in Mussoorie for the first time since LBSNAA
 - Each officer arrives from a different posting and shares what they've been up to
 - Each officer gets a dream-bubble/flashback panel showing a highlight from their decade of service in their home state
 - The tone is mature, warm, emotional with gentle humour — contrasting their younger selves with who they've become
@@ -718,7 +769,7 @@ const STORY_TEMPLATES = {
   },
   disaster_drill: {
     title: "The Night of the Disaster Drill",
-    brief: `- During an emergency response simulation night at LBSNAA, the six officers are unexpectedly grouped into one crisis team
+    brief: `- During an emergency response simulation night at LBSNAA, the officers are unexpectedly grouped into one crisis team
 - They must coordinate district-level flood/landslide response decisions under time pressure
 - Each officer gets a dream-bubble panel imagining how they would protect lives in their home state
 - The tone is high-energy but dignified, with warm humour rooted in teamwork and training life
@@ -727,7 +778,7 @@ const STORY_TEMPLATES = {
   },
   district_day: {
     title: "One Day, Six Districts",
-    brief: `- On their last evening at LBSNAA, the six officers imagine a future "day in the life" in their first districts
+    brief: `- On their last evening at LBSNAA, the officers imagine a future "day in the life" in their first districts
 - The story alternates between Mussoorie present-time bonding and short dream-bubble glimpses of each officer in action
 - Each officer gets a dream panel visualizing a meaningful district-level challenge and humane solution in their home state
 - The tone is mature, hopeful, and affectionate with light humour and civic purpose
@@ -736,7 +787,7 @@ const STORY_TEMPLATES = {
   },
   treasure_hunt: {
     title: "The Farewell Treasure Hunt",
-    brief: `- On their final night, the six officers discover a surprise farewell treasure hunt set across iconic LBSNAA locations
+    brief: `- On their final night, the officers discover a surprise farewell treasure hunt set across iconic LBSNAA locations
 - Each clue triggers a memory, an inside joke, and one dream-bubble moment about their future service journey
 - Each officer gets a dream panel tied to their home state and public service aspirations
 - The tone is playful, nostalgic, and warm, with clean humour based on academy life
@@ -745,7 +796,7 @@ const STORY_TEMPLATES = {
   },
   ethics_dilemma: {
     title: "The Ethics Desk at Midnight",
-    brief: `- The six officers stay back after class to discuss a difficult but realistic ethics dilemma from training
+    brief: `- the officers stay back after class to discuss a difficult but realistic ethics dilemma from training
 - Through debate, empathy, and teamwork, they find a principled path that balances law, compassion, and practicality
 - Each officer gets a dream-bubble panel imagining ethical leadership in their home state
 - The tone is thoughtful, respectful, and quietly humorous — no cynicism, only grounded optimism
@@ -756,24 +807,25 @@ const STORY_TEMPLATES = {
 
 function buildPrompt(groupName, chars) {
   const mode = getStoryMode();
+  const panelCount = getPanelCount();
   const template = STORY_TEMPLATES[document.getElementById('storyTemplate').value] || STORY_TEMPLATES.last_night;
   const customIdea = getCustomIdea();
   const hasCustomInput = Object.values(customIdea).some(v => v && v.length);
   const charList = chars.map((c, i) =>
-    `${i+1}. ${c.name} (${c.gender}) — from ${c.state} — quirk: ${c.quirk}`
+    `${i+1}. ${c.name} (${c.gender}) — allotment year: ${c.allotment_year || 'unknown'} — from ${c.state} — quirk: ${c.quirk}`
   ).join('\n');
   const defaultCustomTitle = "The Last Night Before Posting";
   const storyTitle = mode === 'custom' ? defaultCustomTitle : template.title;
 
   const customBrief = `- USER STORY IDEA MODE is enabled. Build the story from the user idea below while preserving a dignified, warm LBSNAA memoir tone.
 - Premise: ${customIdea.premise || 'Use a heartfelt final-evening LBSNAA premise with meaningful teamwork.'}
-- Conflict: ${customIdea.conflict || 'Introduce a practical challenge that requires all six officers to contribute.'}
+- Conflict: ${customIdea.conflict || 'Introduce a practical challenge that requires all officers to contribute.'}
 - Mood: ${customIdea.mood || 'Warm, respectful, witty, nostalgic, institution-appropriate.'}
 - Key location(s): ${customIdea.location || 'LBSNAA campus spaces + Mussoorie atmosphere.'}
 - Ending note: ${customIdea.ending || 'End with emotional closure, shared purpose, and a toast/group moment.'}
 - Optional raw idea text from user: ${customIdea.freeText || 'Not provided.'}
 - STRICT REWRITE GUARDRAIL: If any part of the user idea is risky, crude, disrespectful, gossipy, controversial, or off-tone for senior civil servants, DO NOT reject the story. Rewrite that part into a dignified, batch-gift-safe equivalent and proceed.
-- Keep the narrative compact and panel-efficient: exactly 10 panels total, with clear setup, escalation, dream moments, and finale.`;
+- Keep the narrative compact and panel-efficient: exactly ${panelCount} panels total, with clear setup, escalation, dream moments, and finale.`;
   const selectedBrief = mode === 'custom' ? customBrief : template.brief;
 
   return `You are writing a comic book script for a group of IAS officer trainees (Phase 5) at LBSNAA, Mussoorie. The comic is called "${storyTitle}" and is a heartfelt + humorous memoir gift for the batch.
@@ -781,13 +833,13 @@ function buildPrompt(groupName, chars) {
 GROUP NAME: ${groupName || 'The Mussoorie Six'}
 STORY MODE: ${mode === 'custom' ? 'CUSTOM IDEA (Guided + Free Text)' : 'CURATED TEMPLATE'}
 
-THE SIX CHARACTERS:
+THE CHARACTERS:
 ${charList}
 
 COMIC BRIEF:
 ${selectedBrief}
 
-OUTPUT FORMAT — Write exactly 10 panels in this JSON structure and NOTHING ELSE outside the JSON:
+OUTPUT FORMAT — Write exactly ${panelCount} panels in this JSON structure and NOTHING ELSE outside the JSON:
 
 {
   "title": "${storyTitle}",
@@ -795,7 +847,7 @@ OUTPUT FORMAT — Write exactly 10 panels in this JSON structure and NOTHING ELS
   "tagline": "A short witty tagline for this specific group",
   "intro": "2-3 sentence story setup (narrator voice, warm and funny)",
   "characters": [
-    {"name": "...", "state": "...", "quirk": "...", "role": "their role/personality in the group in 5 words"}
+    {"name": "...", "allotment_year": 1997, "state": "...", "quirk": "...", "role": "their role/personality in the group in 5 words"}
   ],
   "panels": [
     {
@@ -817,18 +869,24 @@ OUTPUT FORMAT — Write exactly 10 panels in this JSON structure and NOTHING ELS
 IMPORTANT RULES:
 - Use correct pronouns based on each character's gender (he/him for Male, she/her for Female)
 - Use each character's name in dialogues — make it personal
+- SENIORITY RULES (STRICT):
+  - Lower allotment year means more senior (e.g., 1996 senior to 1997).
+  - When a junior addresses a senior directly, junior must use "sir" or "ma'am" according to the senior's gender.
+  - A senior addressing a junior can use junior's name naturally.
+  - If two officers share the same allotment year, they are peers and address each other by first name (no mandatory honorific).
 - SAFETY: Absolutely NO jokes about caste, religion, politics, body shape, physical appearance, personal relationships, alcohol, or administrative controversies
 - If user idea includes risky/off-tone material, auto-rewrite it into dignified, respectful, batch-gift-safe storytelling (do not output risky content)
 - Keep all humour warm, affectionate, and based on shared LBSNAA experiences only (PT, fog, mess food, case studies, horse riding, Char Dukan, classroom moments)
 - This is for real IAS officers — maintain dignity while being fun
 - Weave each character's quirk into at least one panel
-- Panels 4–9 should each feature at least one dream bubble (one per character across those panels)
+- Ensure every character appears in at least one dialogue line somewhere in the story
+- Distribute dream moments across the middle arc and ensure each character gets at least one dream bubble across the full story
 - Dialogue must feel natural, warm, and occasionally funny
 - Include at least one LBSNAA-specific reference (mess food, PT, horse riding, Char Dukan, fog, case study, etc.)
-- The finale panel (10) must be emotional — all six together, a toast or group moment
+- The final panel (${panelCount}) must be emotional — all officers together, a toast or group moment
 - Return ONLY valid JSON, no markdown, no explanation
 - Do not mention "rewritten content" or "safety policy" in the final script text
-- Keep panel pacing efficient for a 10-panel comic; avoid bloated scenes${mode === 'custom' && !hasCustomInput ? '\n- Since user left custom fields blank, use a classic LBSNAA final-evening group journey arc' : ''}`;
+- Keep panel pacing efficient for a ${panelCount}-panel comic; avoid bloated scenes${mode === 'custom' && !hasCustomInput ? '\n- Since user left custom fields blank, use a classic LBSNAA final-evening group journey arc' : ''}`;
 }
 
 async function generateScript() {
@@ -840,9 +898,15 @@ async function generateScript() {
   // Validate
   const chars = getCharacters();
   const filledNames = chars.filter(c => c.name && !c.name.startsWith('Officer'));
-  if (filledNames.length < 6) {
-    const missing = 6 - filledNames.length;
-    showError(`All 6 character names are required. ${missing} name${missing > 1 ? 's' : ''} still missing.`);
+  const requiredCount = getCharacterCount();
+  if (filledNames.length < requiredCount) {
+    const missing = requiredCount - filledNames.length;
+    showError(`All ${requiredCount} character names are required. ${missing} name${missing > 1 ? 's' : ''} still missing.`);
+    return;
+  }
+  const missingYears = chars.filter(c => !Number.isInteger(c.allotment_year)).map(c => c.name);
+  if (missingYears.length) {
+    showError(`Allotment year is required for seniority logic. Missing for: ${missingYears.join(', ')}`);
     return;
   }
 
@@ -922,6 +986,7 @@ function renderScript(script, chars) {
     script.characters.forEach((c, i) => {
       html += `<div class="char-intro-card">
         <div class="cname">${c.name}</div>
+        ${c.allotment_year ? `<div class="cdetail">Year: ${c.allotment_year}</div>` : ''}
         <div class="cdetail">📍 ${c.state}</div>
         <div class="cdetail">✦ ${c.role || c.quirk}</div>
       </div>`;
@@ -1018,7 +1083,18 @@ function copyScript() {
   });
 }
 document.getElementById('storyMode').addEventListener('change', onStoryModeChange);
+document.getElementById('characterCount').addEventListener('input', () => {
+  const safe = getCharacterCount();
+  document.getElementById('characterCount').value = String(safe);
+  refreshPanelCountDisplay();
+  renderCharacterCards();
+});
 onStoryModeChange();
+refreshPanelCountDisplay();
+renderCharacterCards();
 </script>
 </body>
 </html>
+
+
+
