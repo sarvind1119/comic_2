@@ -360,6 +360,7 @@
     border: 3px solid #1a1a2e;
     overflow: visible;
     background: #f5f5f5;
+    isolation: isolate;
   }
 
   .panel-container + .panel-container {
@@ -372,6 +373,7 @@
     inset: 0;
     overflow: hidden;
     background: #e5e5e5;
+    z-index: 1;
   }
 
   .panel-image {
@@ -380,7 +382,7 @@
     left: 50%;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     transform-origin: center center;
     cursor: grab;
     user-select: none;
@@ -482,9 +484,12 @@
     line-height: 1.4;
     color: #1a1a2e;
     cursor: grab;
-    z-index: 20;
+    z-index: 25;
     box-shadow: 1px 2px 4px rgba(0,0,0,0.15);
     user-select: none;
+    resize: both;
+    overflow: auto;
+    min-height: 56px;
   }
 
   .speech-bubble::after {
@@ -545,8 +550,12 @@
     font-style: italic;
     line-height: 1.5;
     cursor: grab;
-    z-index: 20;
+    z-index: 25;
     user-select: none;
+    resize: both;
+    overflow: auto;
+    min-width: 160px;
+    min-height: 46px;
   }
 
   /* Print styles */
@@ -563,6 +572,27 @@
       print-color-adjust: exact;
     }
     .comic-page:last-child { page-break-after: auto; }
+
+    /* Force bubble/caption visibility and stacking in print/PDF */
+    .panel-container {
+      overflow: visible !important;
+      isolation: isolate !important;
+    }
+    .panel-image-frame,
+    .panel-image {
+      z-index: 1 !important;
+    }
+    .speech-bubble,
+    .caption-box {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      z-index: 50 !important;
+      overflow: visible !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      resize: none !important;
+    }
   }
 
   /* Hide controls during download capture */
@@ -648,7 +678,7 @@ const fileStore = {};
 
 // Per-panel state — persisted to localStorage
 // transforms[panelIdx] = { x, y, zoom }
-// bubbles[panelIdx] = [ {left, top}, ... ]  (indexed in render order)
+// bubbles[panelIdx] = [ {left, top, width, height}, ... ]  (indexed in render order)
 let transforms = {};
 let bubblePositions = {};
 
@@ -1191,14 +1221,17 @@ function addBubblesAndCaption(panel, idx, panelDiv) {
       const isDream = panel.dreamOf && d.character &&
         panel.dreamOf.toLowerCase().includes(d.character.split(' ')[0].toLowerCase());
       bubble.className = 'speech-bubble' + (isDream ? ' thought-bubble' : '');
+      const numberedLine = `${di + 1} ${(d.line || '').trim()}`.trim();
       bubble.innerHTML =
-        `<div class="bubble-speaker">${d.character || 'NARRATOR'}</div>${d.line || ''}`;
+        `<div class="bubble-speaker">${d.character || 'NARRATOR'}</div>${numberedLine}`;
 
       const bIdx = bubbleCounter++;
       const saved = savedBubbles[bIdx];
       if (saved) {
         bubble.style.left = saved.left;
         bubble.style.top  = saved.top;
+        if (saved.width) bubble.style.width = saved.width;
+        if (saved.height) bubble.style.height = saved.height;
       } else {
         const leftPercent = 5 + (di * 30) % 70;
         const topPercent  = 5 + (di * 12) % 30;
@@ -1229,6 +1262,8 @@ function addBubblesAndCaption(panel, idx, panelDiv) {
       if (saved) {
         tb.style.left = saved.left;
         tb.style.top  = saved.top;
+        if (saved.width) tb.style.width = saved.width;
+        if (saved.height) tb.style.height = saved.height;
       } else {
         tb.style.right = '5%';
         tb.style.top   = '10%';
@@ -1251,6 +1286,8 @@ function addBubblesAndCaption(panel, idx, panelDiv) {
       cap.style.top    = saved.top;
       cap.style.right  = 'auto';
       cap.style.bottom = 'auto';
+      if (saved.width) cap.style.width = saved.width;
+      if (saved.height) cap.style.height = saved.height;
     }
     makeBubbleDraggable(cap, panelDiv, idx, bIdx);
     panelDiv.appendChild(cap);
@@ -1259,17 +1296,26 @@ function addBubblesAndCaption(panel, idx, panelDiv) {
 
 function makeBubbleDraggable(el, container, panelIdx, bubbleIdx) {
   let startX, startY, startLeft, startTop;
+  const RESIZE_HANDLE_SIZE = 18;
+
+  const isOnResizeHandle = (clientX, clientY) => {
+    const rect = el.getBoundingClientRect();
+    return clientX >= rect.right - RESIZE_HANDLE_SIZE && clientY >= rect.bottom - RESIZE_HANDLE_SIZE;
+  };
 
   const persist = () => {
     if (!bubblePositions[panelIdx]) bubblePositions[panelIdx] = [];
     bubblePositions[panelIdx][bubbleIdx] = {
       left: el.style.left,
       top:  el.style.top,
+      width: el.style.width || '',
+      height: el.style.height || '',
     };
     saveBubbles();
   };
 
   el.addEventListener('mousedown', (e) => {
+    if (isOnResizeHandle(e.clientX, e.clientY)) return;
     e.preventDefault();
     el.classList.add('dragging');
     startX = e.clientX; startY = e.clientY;
@@ -1297,6 +1343,7 @@ function makeBubbleDraggable(el, container, panelIdx, bubbleIdx) {
 
   el.addEventListener('touchstart', (e) => {
     const touch = e.touches[0];
+    if (isOnResizeHandle(touch.clientX, touch.clientY)) return;
     el.classList.add('dragging');
     startX = touch.clientX; startY = touch.clientY;
     const style = window.getComputedStyle(el);
@@ -1322,6 +1369,10 @@ function makeBubbleDraggable(el, container, panelIdx, bubbleIdx) {
     document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('touchend', onUp);
   });
+
+  // Persist native resize changes (without drag)
+  el.addEventListener('mouseup', persist);
+  el.addEventListener('touchend', persist);
 }
 
 // ======================================================================

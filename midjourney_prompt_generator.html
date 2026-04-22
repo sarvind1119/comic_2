@@ -583,7 +583,15 @@
       Midjourney needs consistent visual descriptions per character to keep faces/clothing the same across panels.
       Fill in what each person looks like — this gets embedded into every panel prompt.
       <br><strong style="color:var(--red);">WARNING: Discord CDN URLs expire in ~24hrs! Use Imgur for permanent photo links.</strong>
+      <br><span style="color:var(--accent2);">OpenAI automation can also use local uploaded character photos directly.</span>
     </p>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+      <span style="font-size:0.7rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">Number of characters:</span>
+      <button onclick="changeCharCount(-1)" style="font-family:'Bangers',cursive;font-size:1.1rem;width:32px;height:32px;background:var(--surface2);color:var(--text);border:1px solid var(--border);cursor:pointer;">−</button>
+      <span id="charCountDisplay" style="font-family:'Bangers',cursive;font-size:1.2rem;color:var(--accent);min-width:24px;text-align:center;">6</span>
+      <button onclick="changeCharCount(+1)" style="font-family:'Bangers',cursive;font-size:1.1rem;width:32px;height:32px;background:var(--surface2);color:var(--text);border:1px solid var(--border);cursor:pointer;">+</button>
+      <span style="font-size:0.65rem;color:var(--muted);">(or paste your JSON below — grid auto-expands)</span>
+    </div>
     <div class="char-setup-grid" id="charGrid"></div>
   </div>
 
@@ -654,7 +662,7 @@
       Or paste the full text — the tool will extract the panels automatically.
     </p>
     <textarea class="paste-area" id="scriptInput" placeholder='Paste the comic script JSON here...
-{ "title": "The Last Night Before Posting", "group": "The Cool Squad", "panels": [...] }'></textarea>
+{ "title": "The Last Night Before Posting", "group": "The Cool Squad", "panels": [...] }' oninput="onScriptInputChange()"></textarea>
 
     <div class="btn-row">
       <button class="btn btn-primary" id="generateBtn" onclick="generatePrompts()">
@@ -864,6 +872,8 @@ function snapshotUiChars() {
       desc: document.getElementById(`cdesc${i}`)?.value || '',
       cloth: document.getElementById(`ccloth${i}`)?.value || '',
       photo: document.getElementById(`cphoto${i}`)?.value || '',
+      localPhoto: document.getElementById(`clocalphoto${i}`)?.value || '',
+      localPhotoName: document.getElementById(`clocalphotoname${i}`)?.value || '',
       sref: document.getElementById(`sref-${i}`)?.value || ''
     });
   }
@@ -886,6 +896,8 @@ function renderCharacterSetup(count, seedChars = []) {
       desc: existing.desc || '',
       cloth: existing.cloth || '',
       photo: existing.photo || '',
+      localPhoto: existing.localPhoto || seed.localPhoto || '',
+      localPhotoName: existing.localPhotoName || seed.localPhotoName || '',
       sref: existing.sref || ''
     };
 
@@ -928,6 +940,14 @@ function renderCharacterSetup(count, seedChars = []) {
           <span id="photoStatus${i}" style="font-size:0.65rem;padding:2px 8px;border-radius:2px;display:none;font-family:Space Mono,monospace;"></span>
         </label>
         <input type="text" id="cphoto${i}" placeholder="https://i.imgur.com/xxxxx.jpg (Imgur only!)" value="${(merged.photo || '').replace(/"/g, '&quot;')}" style="font-size:0.72rem;border-color:#333;" oninput="validatePhotoUrl(${i}); saveToStorage()">
+        <input type="hidden" id="clocalphoto${i}" value="${(merged.localPhoto || '').replace(/"/g, '&quot;')}">
+        <input type="hidden" id="clocalphotoname${i}" value="${(merged.localPhotoName || '').replace(/"/g, '&quot;')}">
+        <input type="file" id="cphotofile${i}" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="uploadLocalPhoto(${i}, event)">
+        <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-secondary" style="padding:6px 10px;font-size:0.68rem;" onclick="triggerLocalPhotoPicker(${i})">Upload local image</button>
+          <button type="button" class="btn btn-secondary" style="padding:6px 10px;font-size:0.68rem;" onclick="clearLocalPhoto(${i})">Clear local</button>
+          <span id="photoSource${i}" style="font-size:0.68rem;color:#94a3b8;font-family:'Space Mono',monospace;">Source: None</span>
+        </div>
       </div>
     `;
     charGrid.appendChild(div);
@@ -967,7 +987,9 @@ function saveToStorage() {
       skin: document.getElementById(`cskin${i}`)?.value || 'medium brown skin',
       desc: document.getElementById(`cdesc${i}`)?.value || '',
       cloth: document.getElementById(`ccloth${i}`)?.value || '',
-      photo: document.getElementById(`cphoto${i}`)?.value || ''
+      photo: document.getElementById(`cphoto${i}`)?.value || '',
+      localPhoto: document.getElementById(`clocalphoto${i}`)?.value || '',
+      localPhotoName: document.getElementById(`clocalphotoname${i}`)?.value || ''
     });
     data.srefs.push(document.getElementById(`sref-${i}`)?.value || '');
   }
@@ -987,6 +1009,7 @@ function loadFromStorage() {
     if (data.mjVersion) document.getElementById('mjVersion').value = data.mjVersion;
     const desiredCount = normalizeUiCharacterCount(data.charCount || (Array.isArray(data.chars) ? data.chars.length : MIN_CHAR_COUNT));
     renderCharacterSetup(desiredCount, data.chars || []);
+    updateCharCountDisplay();
     if (data.chars) {
       data.chars.forEach((c, i) => {
         if (document.getElementById(`cname${i}`) && c.name) document.getElementById(`cname${i}`).value = c.name;
@@ -995,6 +1018,9 @@ function loadFromStorage() {
         if (document.getElementById(`cdesc${i}`) && c.desc) document.getElementById(`cdesc${i}`).value = c.desc;
         if (document.getElementById(`ccloth${i}`) && c.cloth) document.getElementById(`ccloth${i}`).value = c.cloth;
         if (document.getElementById(`cphoto${i}`) && c.photo) { document.getElementById(`cphoto${i}`).value = c.photo; validatePhotoUrl(i); }
+        if (document.getElementById(`clocalphoto${i}`) && c.localPhoto) document.getElementById(`clocalphoto${i}`).value = c.localPhoto;
+        if (document.getElementById(`clocalphotoname${i}`) && c.localPhotoName) document.getElementById(`clocalphotoname${i}`).value = c.localPhotoName;
+        validatePhotoUrl(i);
       });
     }
     if (data.srefs) {
@@ -1008,6 +1034,7 @@ function loadFromStorage() {
 }
 
 renderCharacterSetup(MIN_CHAR_COUNT);
+updateCharCountDisplay();
 loadFromStorage();
 loadAutomationState();
 renderAutomationDashboard();
@@ -1023,13 +1050,20 @@ document.getElementById('mjVersion').addEventListener('change', saveToStorage);
 function getCharacters() {
   const chars = [];
   for (let i = 0; i < getUiCharacterCount(); i++) {
+    const photo = document.getElementById(`cphoto${i}`).value.trim();
+    const localPhoto = document.getElementById(`clocalphoto${i}`)?.value.trim() || '';
+    const photoRef = localPhoto || photo;
     chars.push({
       name: document.getElementById(`cname${i}`).value.trim() || getDefaultCharName(i),
       gender: document.getElementById(`cgender${i}`).value,
       skin: document.getElementById(`cskin${i}`).value,
       desc: document.getElementById(`cdesc${i}`).value.trim(),
       cloth: document.getElementById(`ccloth${i}`).value.trim(),
-      photo: document.getElementById(`cphoto${i}`).value.trim()
+      photo,
+      localPhoto,
+      photo_ref: photoRef,
+      photo_source: localPhoto ? 'local' : (photo ? 'url' : 'none'),
+      localPhotoName: document.getElementById(`clocalphotoname${i}`)?.value.trim() || ''
     });
   }
   return chars;
@@ -1040,6 +1074,43 @@ function syncCharacterSetupForScript(script) {
   const desired = normalizeUiCharacterCount(scriptChars.length || MIN_CHAR_COUNT);
   if (desired !== getUiCharacterCount()) {
     renderCharacterSetup(desired, scriptChars);
+    updateCharCountDisplay();
+  }
+  // Always overwrite names and gender from JSON (JSON is authoritative for who the characters are).
+  // Other fields (photo, description, clothing) are left untouched so user's work is preserved.
+  scriptChars.forEach((c, i) => {
+    const nameEl = document.getElementById(`cname${i}`);
+    if (nameEl && c.name) nameEl.value = c.name;
+    const genderEl = document.getElementById(`cgender${i}`);
+    if (genderEl && c.gender) genderEl.value = c.gender.toLowerCase() === 'female' ? 'female' : 'male';
+  });
+  saveToStorage();
+}
+
+function updateCharCountDisplay() {
+  const el = document.getElementById('charCountDisplay');
+  if (el) el.textContent = String(getUiCharacterCount());
+}
+
+function changeCharCount(delta) {
+  const current = getUiCharacterCount();
+  const next = normalizeUiCharacterCount(current + delta);
+  if (next === current) return;
+  renderCharacterSetup(next);
+  updateCharCountDisplay();
+}
+
+function onScriptInputChange() {
+  const raw = (document.getElementById('scriptInput')?.value || '').trim();
+  if (!raw) return;
+  try {
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const script = JSON.parse(clean);
+    if (Array.isArray(script?.characters) && script.characters.length >= MIN_CHAR_COUNT) {
+      syncCharacterSetupForScript(script);
+    }
+  } catch (_) {
+    // not valid JSON yet — ignore silently
   }
 }
 
@@ -1067,7 +1138,18 @@ function normalizeHost(urlLike) {
   }
 }
 
+function isLocalHostedPhotoUrl(urlLike) {
+  try {
+    const parsed = new URL(urlLike);
+    return ['localhost', '127.0.0.1'].includes(parsed.hostname.toLowerCase()) &&
+      parsed.pathname.startsWith('/uploads/character_refs/');
+  } catch (e) {
+    return false;
+  }
+}
+
 function isApprovedPhotoUrl(urlLike) {
+  if (isLocalHostedPhotoUrl(urlLike)) return true;
   const host = normalizeHost(urlLike);
   if (!host) return false;
   return PHOTO_ALLOWED_HOSTS.some(allowed => host === allowed || host.endsWith('.' + allowed));
@@ -1081,8 +1163,26 @@ function isApprovedMidjourneyUrl(urlLike) {
 
 function validatePhotoUrl(i) {
   const val = document.getElementById(`cphoto${i}`).value.trim();
+  const localVal = document.getElementById(`clocalphoto${i}`)?.value.trim() || '';
   const status = document.getElementById(`photoStatus${i}`);
-  if (!val) { status.style.display = 'none'; return; }
+  const source = document.getElementById(`photoSource${i}`);
+  if (!val && !localVal) {
+    status.style.display = 'none';
+    if (source) source.textContent = 'Source: None';
+    return;
+  }
+  if (localVal) {
+    status.style.display = 'inline';
+    status.textContent = 'Local upload ready';
+    status.style.background = 'rgba(59,130,246,0.14)';
+    status.style.color = '#60a5fa';
+    status.style.border = '1px solid rgba(59,130,246,0.35)';
+    if (source) {
+      const localName = document.getElementById(`clocalphotoname${i}`)?.value || 'local file';
+      source.textContent = `Source: Local (${localName})`;
+    }
+    return;
+  }
   const valid = val.startsWith('http') && isApprovedPhotoUrl(val);
   status.style.display = 'inline';
   if (valid) {
@@ -1090,12 +1190,78 @@ function validatePhotoUrl(i) {
     status.style.background = 'rgba(34,197,94,0.15)';
     status.style.color = '#22c55e';
     status.style.border = '1px solid rgba(34,197,94,0.3)';
+    if (source) source.textContent = 'Source: URL';
   } else {
     status.textContent = 'Use Imgur URL';
     status.style.background = 'rgba(239,68,68,0.1)';
     status.style.color = '#ef4444';
     status.style.border = '1px solid rgba(239,68,68,0.3)';
+    if (source) source.textContent = 'Source: URL (invalid)';
   }
+}
+
+function triggerLocalPhotoPicker(i) {
+  const input = document.getElementById(`cphotofile${i}`);
+  if (input) input.click();
+}
+
+function clearLocalPhoto(i) {
+  const localInput = document.getElementById(`clocalphoto${i}`);
+  const localNameInput = document.getElementById(`clocalphotoname${i}`);
+  const fileInput = document.getElementById(`cphotofile${i}`);
+  if (localInput) localInput.value = '';
+  if (localNameInput) localNameInput.value = '';
+  if (fileInput) fileInput.value = '';
+  validatePhotoUrl(i);
+  saveToStorage();
+}
+
+async function uploadLocalPhoto(i, event) {
+  const file = (event.target.files || [])[0];
+  if (!file) return;
+  if (!/^image\/(png|jpeg|webp)$/i.test(file.type)) {
+    showError('Unsupported local image type. Use PNG, JPG, JPEG, or WEBP.');
+    event.target.value = '';
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const res = await fetch('http://localhost:8765/api/upload-character-ref', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: file.name,
+          data_url: reader.result
+        })
+      });
+      const rawText = await res.text();
+      let data = {};
+      try {
+        data = rawText ? JSON.parse(rawText) : {};
+      } catch (_) {
+        if (!res.ok && /<!DOCTYPE|<html/i.test(rawText)) {
+          throw new Error('Server returned an HTML error page. Please restart `python server.py` so the new upload endpoint is available.');
+        }
+        throw new Error('Server returned an invalid response. Please restart `python server.py` and try again.');
+      }
+      if (!res.ok) throw new Error(data.error?.message || data.error || 'Upload failed');
+      document.getElementById(`clocalphoto${i}`).value = data.url || '';
+      document.getElementById(`clocalphotoname${i}`).value = file.name || '';
+      validatePhotoUrl(i);
+      saveToStorage();
+    } catch (err) {
+      showError('Could not upload local character image: ' + err.message);
+    } finally {
+      event.target.value = '';
+    }
+  };
+  reader.onerror = () => {
+    showError('Could not read the selected local image.');
+    event.target.value = '';
+  };
+  reader.readAsDataURL(file);
 }
 
 function getSrefValue(i) {
@@ -1299,11 +1465,11 @@ async function generatePrompts() {
 
     const chars = getCharacters();
     const invalidPhotoRows = chars
-      .map((c, i) => ({ i: i + 1, photo: c.photo }))
-      .filter(x => x.photo && !isApprovedPhotoUrl(x.photo))
+      .map((c, i) => ({ i: i + 1, photo: c.photo, localPhoto: c.localPhoto }))
+      .filter(x => !x.localPhoto && x.photo && !isApprovedPhotoUrl(x.photo))
       .map(x => x.i);
     if (invalidPhotoRows.length) {
-      throw new Error(`Invalid passport photo URL(s): ${invalidPhotoRows.join(', ')}. Use permanent Imgur links.`);
+      throw new Error(`Invalid passport photo URL(s): ${invalidPhotoRows.join(', ')}. Use permanent Imgur links or local uploads.`);
     }
     const style = getStyleString();
     const params = getParams();
@@ -1400,7 +1566,7 @@ function renderOutput(prompts, panels, chars, script, style, params) {
   window._latestStyle = style || '';
   window._latestParams = params || '';
 
-  const photoCount = chars.filter(c => c.photo).length;
+  const photoCount = chars.filter(c => c.photo_ref).length;
   const srefUrls = getSrefUrls();
   const srefCount = srefUrls.length;
   document.getElementById('outputTitle').textContent =
@@ -1668,7 +1834,9 @@ function buildCharacterLock() {
         description: c.desc,
         clothing: c.cloth
       },
-      photo_ref: c.photo || '',
+      photo_ref: c.photo_ref || '',
+      photo_url: c.photo || '',
+      photo_local: c.localPhoto || '',
       sheet_ref: srefs[i] || ''
     })),
     generated_at: new Date().toISOString()
@@ -1688,6 +1856,7 @@ function saveAutomationState() {
       title: j.title,
       prompt: j.prompt,
       required_characters: j.required_characters,
+      reference_images: j.reference_images || [],
       filename: j.filename,
       status: j.status,
       attempts: j.attempts,
@@ -1739,10 +1908,12 @@ function renderAutomationDashboard() {
       jobsList.innerHTML = jobs.map(job => {
         const best = job.best_candidate_index != null ? job.candidates[job.best_candidate_index] : null;
         const scoreText = best && best.score ? `consistency ${Number(best.score.consistency_score || 0).toFixed(2)} · style ${Number(best.score.style_score || 0).toFixed(2)}` : 'no score';
+        const errorText = job.last_error ? `<div class="scene-note" style="color:#fca5a5;">${job.last_error}</div>` : '';
         return `<div class="auto-row">
           <div>
             <div style="font-size:0.78rem;color:#ddd;">P${String(job.panel_number).padStart(2,'0')} · ${job.title || ''}</div>
             <div class="scene-note">attempts ${job.attempts || 0}/3 · ${scoreText}</div>
+            ${errorText}
           </div>
           <span class="auto-status ${job.status}">${job.status}</span>
         </div>`;
@@ -1792,6 +1963,7 @@ ${lockText}
 Constraints:
 - single comic panel, portrait 3:4
 - no text, no letters, no speech bubbles, no watermark
+- preserve identities from any provided character reference images
 - maintain style continuity with previous approved panels`;
 }
 
@@ -1802,17 +1974,18 @@ function getModelTierConfig() {
   return { quality: 'medium', size: '1024x1536', tier };
 }
 
-async function callOpenAIGenerateImage(openaiKey, prompt) {
+async function callOpenAIGenerateImage(openaiKey, prompt, referenceImages) {
   const cfg = getModelTierConfig();
   const res = await fetch('http://localhost:8765/api/openai/generate-image', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       api_key: openaiKey,
-      model: 'gpt-image-1',
+      model: 'gpt-5.4',
       prompt,
       quality: cfg.quality,
-      size: cfg.size
+      size: cfg.size,
+      reference_images: referenceImages || []
     })
   });
   const data = await res.json();
@@ -1862,7 +2035,7 @@ function chooseBestCandidateIndex(candidates) {
 
 async function generateAndScoreCandidate(job, openaiKey) {
   const openaiPrompt = normalizePromptForOpenAI(job.prompt, automationState.character_lock || {});
-  const imageB64 = await callOpenAIGenerateImage(openaiKey, openaiPrompt);
+  const imageB64 = await callOpenAIGenerateImage(openaiKey, openaiPrompt, job.reference_images || []);
   const score = await callOpenAIScoreImage(openaiKey, imageB64, job.prompt, job.required_characters || []);
   const pass = !!score.pass;
   return {
@@ -1889,6 +2062,7 @@ async function runAutomationJob(job, openaiKey) {
       const candidate = await generateAndScoreCandidate(job, openaiKey);
       job.candidates.push(candidate);
       hasGeneratedCandidate = true;
+      job.last_error = '';
       job.best_candidate_index = chooseBestCandidateIndex(job.candidates);
       if (candidate.pass) {
         job.status = AUTO_STATUS.REVIEW;
@@ -1897,6 +2071,7 @@ async function runAutomationJob(job, openaiKey) {
         return;
       }
     } catch (err) {
+      job.last_error = String(err.message || err);
       job.candidates.push({
         attempt: job.attempts,
         pass: false,
@@ -1966,18 +2141,28 @@ function prepareAutomationJobs() {
   (window._latestPanels || []).forEach(p => panelMap[p.number] = p);
 
   automationState.character_lock = buildCharacterLock();
+  const lockChars = (automationState.character_lock && automationState.character_lock.characters) || [];
   automationState.jobs = (window._latestPrompts || []).map((item, idx) => {
     const panel = panelMap[item.panel] || window._latestPanels[idx] || {};
     const required = (panel.dialogues || [])
       .map(d => d.character)
       .filter(Boolean)
       .filter((v, i, arr) => arr.indexOf(v) === i);
+    const loweredRequired = required.map(n => String(n).split(' ')[0].toLowerCase());
+    const referenceImages = lockChars
+      .filter(c => c.photo_ref)
+      .filter(c => {
+        const first = String(c.name || '').split(' ')[0].toLowerCase();
+        return loweredRequired.some(req => req.includes(first) || first.includes(req));
+      })
+      .map(c => c.photo_ref);
     const panelNo = Number(item.panel) || (idx + 1);
     return {
       panel_number: panelNo,
       title: item.title || panel.title || '',
       prompt: item.prompt,
       required_characters: required,
+      reference_images: referenceImages,
       filename: `panel_${String(panelNo).padStart(2, '0')}.png`,
       status: AUTO_STATUS.QUEUED,
       attempts: 0,

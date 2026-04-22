@@ -11,10 +11,22 @@ import urllib.request
 import urllib.error
 import os
 import sys
+import base64
+import re
+import uuid
+from urllib.parse import urlparse
 
 PORT = 8765
 API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+UPLOAD_DIR = os.path.join("uploads", "character_refs")
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+LOCAL_HOSTS = {"localhost", "127.0.0.1"}
+ALLOWED_IMAGE_TYPES = {
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/webp": ".webp",
+}
 
 class ProxyHandler(http.server.SimpleHTTPRequestHandler):
 
@@ -29,6 +41,8 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         if self.path == "/api/generate":
             self.handle_generate()
+        elif self.path == "/api/upload-character-ref":
+            self.handle_upload_character_ref()
         elif self.path == "/api/openai/generate-image":
             self.handle_openai_generate_image()
         elif self.path == "/api/openai/score-image":
@@ -104,6 +118,90 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return json.loads(resp.read())
 
+    def _sanitize_stem(self, filename):
+        stem = os.path.splitext(filename or "character_ref")[0]
+        stem = re.sub(r"[^A-Za-z0-9._-]+", "-", stem).strip("._-")
+        return stem or "character_ref"
+
+    def _make_local_url(self, rel_path):
+        return f"http://localhost:{PORT}/{rel_path.replace(os.sep, '/')}"
+
+    def _data_url_to_bytes(self, data_url):
+        match = re.match(r"^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$", data_url or "", re.DOTALL)
+        if not match:
+            raise ValueError("Invalid image data URL.")
+        mime_type = match.group(1).lower()
+        if mime_type not in ALLOWED_IMAGE_TYPES:
+            raise ValueError("Unsupported image type. Use PNG, JPG, JPEG, or WEBP.")
+        raw = base64.b64decode(match.group(2), validate=True)
+        if len(raw) > MAX_UPLOAD_BYTES:
+            raise ValueError(f"Image too large. Max size is {MAX_UPLOAD_BYTES // (1024 * 1024)}MB.")
+        return mime_type, raw
+
+    def _reference_to_input_image(self, ref):
+        if not ref:
+            return None
+        if isinstance(ref, dict):
+            ref = ref.get("url") or ref.get("image_url") or ref.get("photo_ref") or ""
+        if not isinstance(ref, str):
+            return None
+        ref = ref.strip()
+        if not ref:
+            return None
+        if ref.startswith("data:image/"):
+            return {"type": "input_image", "image_url": ref}
+
+        parsed = urlparse(ref)
+        if parsed.scheme in ("http", "https") and parsed.hostname in LOCAL_HOSTS:
+            rel_path = parsed.path.lstrip("/").replace("/", os.sep)
+            abs_path = os.path.abspath(rel_path)
+            uploads_root = os.path.abspath(UPLOAD_DIR)
+            if abs_path.startswith(uploads_root + os.sep) or abs_path == uploads_root:
+                if not os.path.exists(abs_path):
+                    raise ValueError("Local reference image is missing. Re-upload it in Tool 2.")
+                with open(abs_path, "rb") as f:
+                    raw = f.read()
+                if len(raw) > MAX_UPLOAD_BYTES:
+                    raise ValueError("Local reference image exceeds size limit.")
+                ext = os.path.splitext(abs_path)[1].lower()
+                mime_type = ".jpg" if ext == ".jpeg" else ext
+                mime_map = {
+                    ".png": "image/png",
+                    ".jpg": "image/jpeg",
+                    ".webp": "image/webp",
+                }
+                content_type = mime_map.get(mime_type)
+                if not content_type:
+                    raise ValueError("Unsupported local reference image type.")
+                b64 = base64.b64encode(raw).decode("utf-8")
+                return {"type": "input_image", "image_url": f"data:{content_type};base64,{b64}"}
+        return {"type": "input_image", "image_url": ref}
+
+    def handle_upload_character_ref(self):
+        try:
+            payload = self._read_json_payload()
+            filename = payload.get("filename", "")
+            data_url = payload.get("data_url", "")
+            mime_type, raw = self._data_url_to_bytes(data_url)
+            ext = ALLOWED_IMAGE_TYPES[mime_type]
+            safe_name = self._sanitize_stem(filename)
+            os.makedirs(UPLOAD_DIR, exist_ok=True)
+            final_name = f"{safe_name}-{uuid.uuid4().hex[:12]}{ext}"
+            rel_path = os.path.join(UPLOAD_DIR, final_name)
+            with open(rel_path, "wb") as f:
+                f.write(raw)
+            self.respond(200, {
+                "url": self._make_local_url(rel_path),
+                "path": rel_path.replace(os.sep, "/"),
+                "filename": final_name,
+                "content_type": mime_type,
+                "size": len(raw),
+            })
+        except ValueError as e:
+            self.respond(400, {"error": str(e)})
+        except Exception as e:
+            self.respond(500, {"error": str(e)})
+
     def handle_openai_generate_image(self):
         try:
             payload = self._read_json_payload()
@@ -117,17 +215,35 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
                 self.respond(400, {"error": "Missing required field: prompt"})
                 return
 
-            req_payload = {
-                "model": payload.get("model", "gpt-image-1"),
-                "prompt": prompt,
-                "size": payload.get("size", "1024x1536"),
-                "response_format": "b64_json"
-            }
-            if payload.get("quality"):
-                req_payload["quality"] = payload.get("quality")
+            content = [{"type": "input_text", "text": prompt}]
+            for ref in payload.get("reference_images", []) or []:
+                input_image = self._reference_to_input_image(ref)
+                if input_image:
+                    content.append(input_image)
 
-            result = self._openai_post("https://api.openai.com/v1/images/generations", req_payload, api_key, timeout=240)
-            self.respond(200, result)
+            tool = {
+                "type": "image_generation",
+                "size": payload.get("size", "1024x1536"),
+                "quality": payload.get("quality", "medium"),
+            }
+            req_payload = {
+                "model": payload.get("model", "gpt-5.4"),
+                "input": [{
+                    "role": "user",
+                    "content": content
+                }],
+                "tools": [tool]
+            }
+
+            result = self._openai_post("https://api.openai.com/v1/responses", req_payload, api_key, timeout=240)
+            image_data = [
+                output.get("result")
+                for output in result.get("output", [])
+                if output.get("type") == "image_generation_call" and output.get("result")
+            ]
+            if not image_data:
+                raise ValueError("OpenAI image generation returned no image data")
+            self.respond(200, {"data": [{"b64_json": image_data[0]}], "raw": result})
 
         except urllib.error.HTTPError as e:
             raw = e.read().decode(errors="ignore")
@@ -136,6 +252,8 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
             except Exception:
                 err = {"error": raw or f"HTTP {e.code}"}
             self.respond(e.code, err)
+        except ValueError as e:
+            self.respond(400, {"error": str(e)})
         except Exception as e:
             self.respond(500, {"error": str(e)})
 
@@ -165,7 +283,7 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
                     "pass": {"type": "boolean"},
                     "notes": {"type": "string"}
                 },
-                "required": ["consistency_score", "style_score", "text_artifact_flag", "character_presence", "pass"],
+                "required": ["consistency_score", "style_score", "text_artifact_flag", "character_presence", "pass", "notes"],
                 "additionalProperties": False
             }
 
@@ -250,6 +368,7 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
     print(f"\n{'='*50}")
     print(f"  LBSNAA Comic Generator — Local Server")
     print(f"{'='*50}")
